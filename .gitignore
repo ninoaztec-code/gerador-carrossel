@@ -1,0 +1,8 @@
+app/.envio.local
+.env
+.env.*
+*.local
+node_modules/
+.next/
+.next-old/
+out/

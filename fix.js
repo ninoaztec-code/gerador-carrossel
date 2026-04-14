@@ -1,0 +1,1 @@
+require('fs').writeFileSync('app/page.tsx', require('fs').readFileSync('app/page.tsx','utf8').split('\n').slice(0,0).join('\n'))
