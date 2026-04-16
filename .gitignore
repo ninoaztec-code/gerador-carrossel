@@ -1,4 +1,4 @@
-app/.envio.local
+.env.local
 .env
 .env.*
 *.local
