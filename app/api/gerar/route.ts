@@ -1,82 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { CarouselDocument, FamilyId, FAMILIES, LIMITS, validateCarousel } from "@/lib/carousel";
+
+const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 export async function POST(req: NextRequest) {
   try {
-    const { tema, voz, handle } = await req.json();
+    const { tema, family = "editorial-premium", slides = 6 } = await req.json();
+    if (!tema || typeof tema !== "string") return NextResponse.json({ error: "Tema é obrigatório." }, { status: 400 });
+    if (!FAMILIES[family as FamilyId]) return NextResponse.json({ error: "Família visual inválida." }, { status: 400 });
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return NextResponse.json({ error: "GEMINI_API_KEY não configurada." }, { status: 500 });
 
-    if (!tema || typeof tema !== "string") {
-      return NextResponse.json(
-        { error: "Tema é obrigatório." },
-        { status: 400 }
-      );
-    }
+    const prompt = `Você é diretor de arte e editor de carrosséis do Instagram. Não desenhe imagens: devolva somente a direção estruturada em JSON.\nTema: ${tema}\nFamília: ${family}\nQuantidade: ${Math.min(10,Math.max(3,Number(slides)||6))}\nLayouts permitidos: hero-photo, statement-portrait, feature-list, checklist, quote, photo-cta.\nLimites rígidos por layout: ${JSON.stringify(LIMITS)}.\nVarie os layouts, use hero-photo na abertura e photo-cta no fechamento. Escreva em português brasileiro, claro, elegante, sem clichês.\nFormato EXATO: {"id":"CAROUSEL","family":"${family}","title":"...","slides":[{"layout":"hero-photo","eyebrow":"01 / 06","headline":"...","body":"...","items":[],"cta":""}]}`;
 
-    const groqKey = process.env.GROQ_API_KEY;
-
-    if (!groqKey) {
-      return NextResponse.json(
-        { error: "GROQ_API_KEY não configurada no .env.local" },
-        { status: 500 }
-      );
-    }
-
-    const vozDesc: Record<string, string> = {
-      educativo: "informativo e didático",
-      descontraido: "leve e divertido",
-      profissional: "formal e sério",
-      vendas: "persuasivo e urgente",
-    };
-
-    const prompt = `Crie um carrossel para Instagram sobre: "${tema}". Tom: ${vozDesc[voz] || "educativo"}.
-Retorne APENAS JSON válido:
-{"slides":[
-  {"type":"cover","tag":"TAG CURTA","title":"TÍTULO\\nDE IMPACTO","subtitle":"Subtítulo de 1-2 frases."},
-  {"type":"content","label":"Dica 01","headline":"Título curto.","body":"2-3 frases explicativas."},
-  {"type":"content","label":"Dica 02","headline":"Título curto.","body":"2-3 frases explicativas."},
-  {"type":"content","label":"Dica 03","headline":"Título curto.","body":"2-3 frases explicativas."},
-  {"type":"cta","tag":"Salve este conteúdo","title":"Frase de fechamento impactante.","action1":"Curta se gostou.","action2":"Comente sua opinião.","action3":"Compartilhe com alguém.","footer":"${handle || "@seuperfil"} · Carrossel"}
-]}`;
-
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${groqKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.8,
-        max_tokens: 1500,
-      }),
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{ temperature:.65, responseMimeType:"application/json" } })
     });
-
     const data = await res.json();
-
-    if (!res.ok) {
-      return NextResponse.json(
-        { error: data?.error?.message || "Erro na Groq." },
-        { status: res.status }
-      );
-    }
-
-    const txt = data?.choices?.[0]?.message?.content || "";
-    const match = txt.match(/\{[\s\S]*\}/);
-
-    if (!match) {
-      return NextResponse.json(
-        { error: "A IA não retornou JSON válido." },
-        { status: 500 }
-      );
-    }
-
-    const parsed = JSON.parse(match[0]);
-
-    return NextResponse.json(parsed);
+    if (!res.ok) return NextResponse.json({ error: data?.error?.message || "Erro no Gemini." }, { status: res.status });
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return NextResponse.json({ error: "Gemini não retornou conteúdo." }, { status: 502 });
+    const doc = JSON.parse(text) as CarouselDocument;
+    doc.family = family as FamilyId;
+    const errors = validateCarousel(doc);
+    if (errors.length) return NextResponse.json({ error: "Gemini retornou conteúdo fora dos limites.", validation: errors }, { status: 422 });
+    return NextResponse.json(doc);
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Erro interno." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Erro interno." }, { status: 500 });
   }
 }
