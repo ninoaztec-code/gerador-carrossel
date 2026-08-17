@@ -5,16 +5,26 @@ export const runtime = "nodejs";
 
 function authorized(req: NextRequest) {
   const secret = process.env.HERMES_API_KEY;
-  if (!secret) return true; // Preview/test mode until the secret is configured in Vercel.
+  if (!secret) return true; // Preview/test mode until the secret is configured.
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-export async function GET() {
+function renderHtmlUrl(req: NextRequest) {
+  return new URL("/api/hermes/render-html", req.nextUrl.origin).toString();
+}
+
+export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     service: "gerador-carrossel",
     endpoint: "/api/hermes",
     accepts: "CarouselDocument JSON",
+    render: {
+      html: renderHtmlUrl(req),
+      method: "POST",
+      contentType: "application/json",
+      authorization: "Bearer HERMES_API_KEY (quando configurada)",
+    },
   });
 }
 
@@ -29,12 +39,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       document: doc,
-      studio: "/studio",
+      studio: new URL("/studio", req.nextUrl.origin).toString(),
       render: {
+        html: renderHtmlUrl(req),
+        method: "POST",
         width: 1080,
         height: 1350,
-        format: "png",
-        status: "accepted",
+        input: "document",
+        status: "ready",
       },
     });
   } catch {
