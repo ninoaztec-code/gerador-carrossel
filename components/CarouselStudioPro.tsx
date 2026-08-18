@@ -1,7 +1,7 @@
 "use client";
 import { useMemo, useRef, useState } from "react";
 import * as htmlToImage from "html-to-image";
-import { CarouselDocument, CarouselSlide, FamilyId, FAMILIES } from "@/lib/carousel";
+import { CarouselDocument, CarouselSlide, FamilyId } from "@/lib/carousel";
 import { cloneTemplate, TEMPLATES, TemplateId } from "@/lib/templates";
 
 type Direction="auto"|"left"|"right"|"top"|"bottom"|"full";
@@ -17,12 +17,21 @@ const cfgFor=(family:FamilyId)=>family==="mago-editorial-rose"?{...roseCfg}:{...
 
 function upload(setter:(v:string)=>void){return (e:React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>setter(String(r.result));r.readAsDataURL(f)}}
 function Img({src,cfg}:{src?:string;cfg:CardCfg}){if(!src||!cfg.showImage)return null;return <img src={src} alt="" style={{width:"100%",height:"100%",display:"block",objectFit:cfg.fit,objectPosition:"center",opacity:cfg.opacity/100,transform:`translate(${cfg.panX}px,${cfg.panY}px) scale(${cfg.zoom/100})`,transformOrigin:"center"}}/>}
+function Placeholder(){return <div style={{width:"100%",height:"100%",background:"#E7D5C6",border:"1px solid #B77B5C",color:"#713B2B",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:8,textAlign:"center"}}><div style={{fontSize:28,opacity:.72}}>▧</div><div style={{fontSize:10,fontWeight:800,letterSpacing:".12em"}}>INSIRA SUA FOTO AQUI</div></div>}
 function BrandBlock({brand,cfg,counter,logo}:{brand:Brand;cfg:CardCfg;counter:string;logo?:string}){return <div>{cfg.showBrand&&<><div style={{display:"flex",alignItems:"center",gap:10}}>{logo&&<img src={logo} alt="" style={{width:30,height:30,objectFit:"contain",borderRadius:6}}/>}<div><div style={{fontSize:10,fontWeight:800,letterSpacing:".24em",color:cfg.accent}}>{brand.name}</div><div style={{fontSize:10,fontWeight:700,letterSpacing:".18em",color:cfg.accent,marginTop:6}}>{brand.tagline}</div></div></div></>}{cfg.showCounter&&<div style={{fontSize:10,letterSpacing:".14em",color:cfg.accent,marginTop:26}}>{counter}</div>}<div style={{width:38,height:2,background:cfg.accent,marginTop:12}}/></div>}
 function Copy({slide,cfg,brand,counter,logo,compact=false}:{slide:CarouselSlide;cfg:CardCfg;brand:Brand;counter:string;logo?:string;compact?:boolean}){return <div style={{height:"100%",padding:compact?"28px 30px":"38px 30px",display:"flex",flexDirection:"column",textAlign:cfg.align,minWidth:0}}><BrandBlock brand={brand} cfg={cfg} counter={counter} logo={logo}/>{cfg.showHeadline&&<div style={{fontFamily:"Georgia,serif",fontSize:cfg.headline,fontWeight:700,lineHeight:1.08,marginTop:28,color:cfg.ink}}>{slide.headline}</div>}{cfg.showBody&&slide.body&&<div style={{fontSize:cfg.body,lineHeight:1.5,marginTop:22,color:cfg.ink,opacity:.92}}>{slide.body}</div>}{cfg.showCta&&slide.cta&&<div style={{marginTop:"auto",alignSelf:cfg.align==="center"?"center":cfg.align==="right"?"flex-end":"flex-start",padding:"12px 16px",borderRadius:16,background:cfg.accent,color:cfg.bg,fontSize:11,fontWeight:800}}>{slide.cta}</div>}</div>}
 function Card({slide,index,total,cfg,brand,logo,w,h}:{slide:CarouselSlide;index:number;total:number;cfg:CardCfg;brand:Brand;logo?:string;w:number;h:number}){
- const auto:Direction=index===0?"right":index%4===1?"top":index%4===2?"left":index%4===3?"full":"right";const dir=cfg.direction==="auto"?auto:cfg.direction;const counter=slide.eyebrow||`${String(index+1).padStart(2,"0")} / ${String(total).padStart(2,"0")}`;const photo=<div style={{width:"100%",height:"100%",overflow:"hidden",background:cfg.bg}}><Img src={slide.image} cfg={cfg}/></div>;const copy=<Copy slide={slide} cfg={cfg} brand={brand} counter={counter} logo={logo} compact={dir==="top"||dir==="bottom"}/>;
+ const isRose=cfg.bg.toUpperCase()==="#F7F1EA";
+ const auto:Direction=isRose&&index===3?"left":index===0?"right":index%4===1?"top":index%4===2?"left":index%4===3?"full":"right";
+ const dir=cfg.direction==="auto"?auto:cfg.direction;
+ const counter=slide.eyebrow||`${String(index+1).padStart(2,"0")} / ${String(total).padStart(2,"0")}`;
+ const photo=<div style={{width:"100%",height:"100%",overflow:"hidden",background:isRose?"#E7D5C6":cfg.bg}}>{slide.image?<Img src={slide.image} cfg={cfg}/>:isRose?<Placeholder/>:null}</div>;
+ const copy=<Copy slide={slide} cfg={cfg} brand={brand} counter={counter} logo={logo} compact={dir==="top"||dir==="bottom"}/>;
  const decor=cfg.decor?<><div style={{position:"absolute",width:w*.58,height:w*.20,borderRadius:"50%",background:cfg.accent,opacity:.08,right:-w*.18,top:h*.18,transform:"rotate(-12deg)"}}/><div style={{position:"absolute",width:120,height:2,background:cfg.accent,opacity:.5,left:30,bottom:28}}/></>:null;
- if(dir==="left"||dir==="right")return <div style={{width:w,height:h,display:"grid",gridTemplateColumns:dir==="left"?"52% 48%":"48% 52%",background:cfg.bg,color:cfg.ink,overflow:"hidden",position:"relative"}}>{decor}{dir==="left"?<>{photo}{copy}</>:<>{copy}{photo}</>}</div>;
+ if(dir==="left"||dir==="right"){
+  const columns=isRose&&index===3&&dir==="left"?"40% 60%":dir==="left"?"52% 48%":"48% 52%";
+  return <div style={{width:w,height:h,display:"grid",gridTemplateColumns:columns,background:cfg.bg,color:cfg.ink,overflow:"hidden",position:"relative"}}>{decor}{dir==="left"?<>{photo}{copy}</>:<>{copy}{photo}</>}</div>;
+ }
  if(dir==="top"||dir==="bottom")return <div style={{width:w,height:h,display:"grid",gridTemplateRows:dir==="top"?"46% 54%":"54% 46%",background:cfg.bg,color:cfg.ink,overflow:"hidden",position:"relative"}}>{decor}{dir==="top"?<>{photo}{copy}</>:<>{copy}{photo}</>}</div>;
  return <div style={{width:w,height:h,position:"relative",overflow:"hidden",background:cfg.bg,color:cfg.ink}}><div style={{position:"absolute",inset:0}}>{photo}</div><div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.82))"}}/>{decor}<div style={{position:"absolute",left:20,right:20,bottom:18,height:"52%"}}>{copy}</div></div>
 }
