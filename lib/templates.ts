@@ -11,7 +11,7 @@ export const TEMPLATES: Record<TemplateId, { name: string; description: string; 
       family: "mago-editorial-premium",
       title: "Cortes que acompanham quem você é hoje",
       slides: [
-        { layout: "mago-split", eyebrow: "01 / 05", headline: "Um bom corte acompanha quem você é hoje.", body: "Movimento, moldura do rosto e manutenção possível fazem diferença." },
+        { layout: "mago-split", eyebrow: "01 / 05", headline: "Um bom corte acompanha quem você é hoje.", body: "Movimento, moldura do rosto e manutenção possível fazem diferença.", cta: "Agende seu corte pelo WhatsApp." },
         { layout: "statement-portrait", eyebrow: "02 / 05", headline: "O desenho certo muda a leitura do rosto.", body: "Sem apagar sua identidade e sem exigir uma rotina impossível." },
         { layout: "feature-list", eyebrow: "03 / 05", headline: "O que faz um corte funcionar?", items: ["Movimento", "Proporção", "Textura natural", "Manutenção real"] },
         { layout: "quote", eyebrow: "04 / 05", headline: "Elegância não tem idade. Tem intenção.", body: "O corte deve conversar com a mulher que você é hoje." },
