@@ -1,5 +1,5 @@
-import CarouselStudioPro from "@/components/CarouselStudioPro";
+import CarouselStudioProV2 from "@/components/CarouselStudioProV2";
 
 export default function StudioPage() {
-  return <CarouselStudioPro />;
+  return <CarouselStudioProV2 />;
 }
