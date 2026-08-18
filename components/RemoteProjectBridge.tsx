@@ -24,7 +24,6 @@ type RemoteProject = {
 
 function cardKey(template: string, cardIndex: number) { return `${template}:${cardIndex}`; }
 function photoKey(template: string, cardIndex: number, slotIndex: number) { return `${template}:${cardIndex}:${slotIndex}`; }
-
 function normalizeSize(value?: string) {
   const v = (value || "medium").toLowerCase();
   if (["small", "pequeno"].includes(v)) return "small";
@@ -70,7 +69,7 @@ function toEditorState(project: RemoteProject) {
 export default function RemoteProjectBridge() {
   const [message, setMessage] = useState("");
   const remoteRef = useRef<RemoteProject | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRawRef = useRef<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -79,20 +78,21 @@ export default function RemoteProjectBridge() {
     const storageKey = `mago-project:${projectId}`;
     let cancelled = false;
 
-    async function syncEditorState(raw: string) {
-      let editorState: Record<string, unknown>;
-      try { editorState = JSON.parse(raw); } catch { return; }
+    async function push(raw: string) {
       const remote = remoteRef.current;
       if (!remote) return;
-      const payload = { ...remote, editor_state: editorState, status: editorState.status || remote.status };
+      let editorState: Record<string, unknown>;
+      try { editorState = JSON.parse(raw) as Record<string, unknown>; } catch { return; }
+      const editorStatus = typeof editorState.status === "string" ? editorState.status : remote.status;
+      const payload: RemoteProject = { ...remote, editor_state: editorState, status: editorStatus };
       try {
-        await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
+        const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
         });
-        remoteRef.current = payload as RemoteProject;
-      } catch { /* local autosave remains available */ }
+        if (response.ok) remoteRef.current = payload;
+      } catch { /* o autosave local continua válido */ }
     }
 
     async function load() {
@@ -105,39 +105,41 @@ export default function RemoteProjectBridge() {
         }
         const remote = await response.json() as RemoteProject;
         remoteRef.current = remote;
-        if (!localStorage.getItem(storageKey)) {
-          localStorage.setItem(storageKey, JSON.stringify(toEditorState(remote)));
+        const local = localStorage.getItem(storageKey);
+        if (!local) {
+          const initial = JSON.stringify(toEditorState(remote));
+          localStorage.setItem(storageKey, initial);
+          lastRawRef.current = initial;
           if (!cancelled) window.location.reload();
           return;
         }
+        lastRawRef.current = local;
         setMessage("Projeto conectado à VPS ✓");
       } catch {
         setMessage("Projeto local disponível; sincronização com VPS indisponível.");
       }
     }
 
-    const originalSetItem = Storage.prototype.setItem;
-    const originalRemoveItem = Storage.prototype.removeItem;
-    Storage.prototype.setItem = function(key: string, value: string) {
-      originalSetItem.call(this, key, value);
-      if (this === window.localStorage && key === storageKey) {
-        if (timerRef.current) clearTimeout(timerRef.current);
-        timerRef.current = setTimeout(() => syncEditorState(value), 500);
-      }
-    };
-    Storage.prototype.removeItem = function(key: string) {
-      originalRemoveItem.call(this, key);
-      if (this === window.localStorage && key === storageKey) {
-        fetch(`/api/projects/${encodeURIComponent(projectId)}`, { method: "DELETE" }).catch(() => undefined);
-      }
-    };
-
     load();
+    const timer = window.setInterval(() => {
+      if (!remoteRef.current) return;
+      const raw = localStorage.getItem(storageKey);
+      if (raw === null) {
+        if (lastRawRef.current !== null) {
+          lastRawRef.current = null;
+          fetch(`/api/projects/${encodeURIComponent(projectId)}`, { method: "DELETE" }).catch(() => undefined);
+        }
+        return;
+      }
+      if (raw !== lastRawRef.current) {
+        lastRawRef.current = raw;
+        push(raw);
+      }
+    }, 1000);
+
     return () => {
       cancelled = true;
-      if (timerRef.current) clearTimeout(timerRef.current);
-      Storage.prototype.setItem = originalSetItem;
-      Storage.prototype.removeItem = originalRemoveItem;
+      window.clearInterval(timer);
     };
   }, []);
 
