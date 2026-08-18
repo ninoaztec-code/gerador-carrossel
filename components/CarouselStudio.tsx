@@ -7,21 +7,41 @@ const W = 540, H = 675;
 
 function SlideView({ slide, family, index, total }: { slide: CarouselSlide; family: FamilyId; index: number; total: number }) {
   const t = FAMILIES[family];
-  const dark = slide.layout === "photo-cta" && family === "editorial-premium";
-  const bg = dark ? t.ink : t.bg;
-  const ink = dark ? t.bg : t.ink;
+  const mago = family === "mago-editorial-premium";
+
+  if (mago && slide.layout === "mago-split") {
+    return <div style={{ width: W, height: H, background: "#0A0A0A", color: "#F4F0E8", display: "grid", gridTemplateColumns: "45% 55%", overflow: "hidden", fontFamily: t.sans }}>
+      <div style={{ padding: "34px 27px 29px", display: "flex", flexDirection: "column", minWidth: 0 }}>
+        <div style={{ color: t.accent, fontSize: 9, fontWeight: 700, letterSpacing: ".32em", whiteSpace: "nowrap" }}>MAGO DAS TESOURAS</div>
+        <div style={{ color: t.accent, fontSize: 10, fontWeight: 700, letterSpacing: ".28em", marginTop: 9 }}>45+</div>
+        <div style={{ color: t.accent, fontSize: 10, letterSpacing: ".16em", marginTop: 62, whiteSpace: "nowrap" }}>{slide.eyebrow || `${String(index + 1).padStart(2,"0")} / ${String(total).padStart(2,"0")}`}</div>
+        <div style={{ width: 38, height: 2, background: t.accent, marginTop: 12 }} />
+        <div style={{ marginTop: 27, fontFamily: t.serif, fontWeight: 700, fontSize: 29, lineHeight: 1.12 }}>{slide.headline}</div>
+        {slide.body && <div style={{ marginTop: 29, fontSize: 14, lineHeight: 1.5 }}>{slide.body}</div>}
+        {slide.cta && <div style={{ marginTop: "auto", alignSelf: "flex-start", background: t.accent, color: "#111", padding: "10px 15px", borderRadius: 999, fontSize: 10, lineHeight: 1.2, fontWeight: 800 }}>{slide.cta}</div>}
+      </div>
+      <div style={{ width: "100%", height: "100%", overflow: "hidden", background: "#C8B9A7" }}>
+        {slide.image && <img src={slide.image} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 18%", display: "block" }} />}
+      </div>
+    </div>;
+  }
+
+  const dark = mago || (slide.layout === "photo-cta" && family === "editorial-premium");
+  const bg = dark ? t.bg : t.bg;
+  const ink = dark ? t.ink : t.ink;
   const photo = slide.image;
   const photoLayout = ["hero-photo", "statement-portrait", "photo-cta"].includes(slide.layout);
   return <div style={{ width: W, height: H, background: bg, color: ink, position: "relative", overflow: "hidden", fontFamily: t.sans }}>
-    {photoLayout && photo && <img src={photo} alt="" style={{ position: "absolute", right: 0, top: 0, width: slide.layout === "hero-photo" ? "58%" : "42%", height: "100%", objectFit: "cover" }} />}
-    {slide.layout === "hero-photo" && photo && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(247,243,237,.98) 0%,rgba(247,243,237,.9) 40%,rgba(247,243,237,0) 72%)" }} />}
-    <div style={{ position: "relative", zIndex: 2, height: "100%", boxSizing: "border-box", padding: "48px 46px", width: photoLayout && photo ? "64%" : "100%", display: "flex", flexDirection: "column" }}>
-      <div style={{ fontSize: 10, letterSpacing: ".35em", textTransform: "uppercase", opacity: .65 }}>{slide.eyebrow || `${String(index + 1).padStart(2,"0")} / ${String(total).padStart(2,"0")}`}</div>
-      <div style={{ marginTop: slide.layout === "hero-photo" ? 80 : 56, fontFamily: t.serif, fontWeight: 700, fontSize: slide.layout === "quote" ? 48 : 39, lineHeight: 1.02 }}>{slide.headline}</div>
+    {photoLayout && photo && <div style={{ position: "absolute", right: 0, top: 0, width: slide.layout === "hero-photo" ? "58%" : "42%", height: "100%", overflow: "hidden" }}><img src={photo} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 20%", display: "block" }} /></div>}
+    {slide.layout === "hero-photo" && photo && !mago && <div style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,rgba(247,243,237,.98) 0%,rgba(247,243,237,.9) 40%,rgba(247,243,237,0) 72%)" }} />}
+    <div style={{ position: "relative", zIndex: 2, height: "100%", boxSizing: "border-box", padding: mago ? "39px 27px" : "48px 46px", width: photoLayout && photo ? "64%" : "100%", display: "flex", flexDirection: "column" }}>
+      {mago && <><div style={{ color:t.accent,fontSize:9,fontWeight:700,letterSpacing:".32em" }}>MAGO DAS TESOURAS</div><div style={{ color:t.accent,fontSize:10,fontWeight:700,letterSpacing:".28em",marginTop:8,marginBottom:28 }}>45+</div></>}
+      <div style={{ fontSize: 10, letterSpacing: ".18em", textTransform: "uppercase", opacity: .7, whiteSpace:"nowrap" }}>{slide.eyebrow || `${String(index + 1).padStart(2,"0")} / ${String(total).padStart(2,"0")}`}</div>
+      <div style={{ marginTop: slide.layout === "hero-photo" ? 80 : mago ? 38 : 56, fontFamily: t.serif, fontWeight: 700, fontSize: slide.layout === "quote" ? 48 : 39, lineHeight: 1.02 }}>{slide.headline}</div>
       {slide.body && <div style={{ marginTop: 28, fontSize: 16, lineHeight: 1.55, maxWidth: 350 }}>{slide.body}</div>}
       {!!slide.items?.length && <div style={{ marginTop: 28, display: "grid", gap: 12 }}>{slide.items.map((x,i)=><div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding: slide.layout === "checklist" ? "11px 14px" : 0, borderRadius: 18, background: slide.layout === "checklist" ? t.support : "transparent" }}><span style={{ color:t.accent, fontWeight:900 }}>•</span><span style={{ fontSize:15 }}>{x}</span></div>)}</div>}
       <div style={{ marginTop: "auto" }}>
-        {slide.cta && <div style={{ display:"inline-block", background:t.accent, color:"#fff", padding:"12px 20px", borderRadius:999, fontSize:13, fontWeight:700 }}>{slide.cta}</div>}
+        {slide.cta && <div style={{ display:"inline-block", background:t.accent, color:mago?"#111":"#fff", padding:"12px 20px", borderRadius:999, fontSize:13, fontWeight:700 }}>{slide.cta}</div>}
         <div style={{ marginTop:22, width:70, height:1, background:t.accent }} />
       </div>
     </div>
