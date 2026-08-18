@@ -1,5 +1,5 @@
-export type FamilyId = "editorial-premium" | "organic" | "educational" | "clean-white";
-export type LayoutId = "hero-photo" | "statement-portrait" | "feature-list" | "checklist" | "quote" | "photo-cta";
+export type FamilyId = "editorial-premium" | "mago-editorial-premium" | "organic" | "educational" | "clean-white";
+export type LayoutId = "hero-photo" | "mago-split" | "statement-portrait" | "feature-list" | "checklist" | "quote" | "photo-cta";
 
 export type CarouselSlide = {
   layout: LayoutId;
@@ -20,6 +20,7 @@ export type CarouselDocument = {
 
 export const FAMILIES = {
   "editorial-premium": { name: "Editorial Premium", bg: "#F7F3ED", ink: "#0F0F10", accent: "#C59A6B", support: "#8A6D54", serif: "Georgia, serif", sans: "Arial, sans-serif" },
+  "mago-editorial-premium": { name: "Mago Editorial Premium", bg: "#0A0A0A", ink: "#F4F0E8", accent: "#D1A065", support: "#2A2018", serif: "Georgia, serif", sans: "Arial, sans-serif" },
   organic: { name: "Orgânico Terracota", bg: "#F7F0E8", ink: "#3B241C", accent: "#9A4F35", support: "#D4A06F", serif: "Georgia, serif", sans: "Arial, sans-serif" },
   educational: { name: "Minimal Educacional", bg: "#F4F6F5", ink: "#172124", accent: "#4C8A91", support: "#B8D5D8", serif: "Georgia, serif", sans: "Arial, sans-serif" },
   "clean-white": { name: "Clean White", bg: "#FFFFFF", ink: "#111111", accent: "#B98B5F", support: "#EEE9E3", serif: "Georgia, serif", sans: "Arial, sans-serif" },
@@ -27,6 +28,7 @@ export const FAMILIES = {
 
 export const LIMITS: Record<LayoutId, { headline: number; body: number; items: number }> = {
   "hero-photo": { headline: 58, body: 120, items: 0 },
+  "mago-split": { headline: 64, body: 140, items: 0 },
   "statement-portrait": { headline: 72, body: 180, items: 0 },
   "feature-list": { headline: 72, body: 120, items: 5 },
   checklist: { headline: 64, body: 100, items: 5 },
@@ -50,15 +52,12 @@ export function validateCarousel(doc: CarouselDocument) {
 }
 
 export const DEMO: CarouselDocument = {
-  id: "CM-043",
-  family: "editorial-premium",
-  title: "Quer cortar curto sem deixar de se reconhecer?",
+  id: "MAGO-001",
+  family: "mago-editorial-premium",
+  title: "Um bom corte acompanha quem você é hoje.",
   slides: [
-    { layout: "hero-photo", eyebrow: "CM-043 · CORTE", headline: "Quer cortar curto", body: "sem deixar de se reconhecer?" },
-    { layout: "statement-portrait", eyebrow: "02 / 06", headline: "O medo nem sempre é do cabelo curto.", body: "Muitas vezes, é medo de perder a própria identidade junto com a mudança." },
-    { layout: "feature-list", eyebrow: "03 / 06", headline: "O comprimento é só uma parte do corte.", items: ["Desenho do corte", "Contorno do rosto", "Volume e textura", "Proporção"] },
-    { layout: "checklist", eyebrow: "04 / 06", headline: "O curto não precisa ser radical.", body: "Um short bob bem desenhado pode trazer:", items: ["Leveza", "Movimento", "Praticidade", "Manutenção real"] },
-    { layout: "checklist", eyebrow: "05 / 06", headline: "Antes de cortar, vale considerar:", items: ["Rotina de finalização", "Textura natural", "Volume desejado", "Manutenção possível", "Quanto da sua identidade deseja preservar"] },
-    { layout: "photo-cta", eyebrow: "06 / 06", headline: "Mudar também pode ser continuar se reconhecendo.", body: "Qual mudança você teria vontade de experimentar no seu cabelo?", cta: "Conte nos comentários" },
+    { layout: "mago-split", eyebrow: "01 / 03", headline: "Um bom corte acompanha quem você é hoje.", body: "Movimento, moldura do rosto e manutenção possível fazem diferença.", cta: "Agende seu corte pelo WhatsApp." },
+    { layout: "feature-list", eyebrow: "02 / 03", headline: "O que faz o corte funcionar?", items: ["Movimento sem excesso de peso", "Moldura que valoriza o rosto", "Manutenção possível na rotina", "Identidade preservada"] },
+    { layout: "mago-split", eyebrow: "03 / 03", headline: "Mudar não é deixar de se reconhecer.", body: "É encontrar um desenho que acompanhe quem você é hoje.", cta: "Agende seu corte pelo WhatsApp." },
   ],
 };
