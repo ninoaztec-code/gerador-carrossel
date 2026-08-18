@@ -5,13 +5,20 @@ const MODEL = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 export async function POST(req: NextRequest) {
   try {
-    const { tema, family = "editorial-premium", slides = 6 } = await req.json();
+    const { tema, family = "mago-editorial-premium", slides = 6 } = await req.json();
     if (!tema || typeof tema !== "string") return NextResponse.json({ error: "Tema é obrigatório." }, { status: 400 });
     if (!FAMILIES[family as FamilyId]) return NextResponse.json({ error: "Família visual inválida." }, { status: 400 });
     const key = process.env.GEMINI_API_KEY;
     if (!key) return NextResponse.json({ error: "GEMINI_API_KEY não configurada." }, { status: 500 });
 
-    const prompt = `Você é diretor de arte e editor de carrosséis do Instagram. Não desenhe imagens: devolva somente a direção estruturada em JSON.\nTema: ${tema}\nFamília: ${family}\nQuantidade: ${Math.min(10,Math.max(3,Number(slides)||6))}\nLayouts permitidos: hero-photo, statement-portrait, feature-list, checklist, quote, photo-cta.\nLimites rígidos por layout: ${JSON.stringify(LIMITS)}.\nVarie os layouts, use hero-photo na abertura e photo-cta no fechamento. Escreva em português brasileiro, claro, elegante, sem clichês.\nFormato EXATO: {"id":"CAROUSEL","family":"${family}","title":"...","slides":[{"layout":"hero-photo","eyebrow":"01 / 06","headline":"...","body":"...","items":[],"cta":""}]}`;
+    const isMago = family === "mago-editorial-premium";
+    const layouts = isMago
+      ? "mago-split, feature-list, checklist, quote"
+      : "hero-photo, statement-portrait, feature-list, checklist, quote, photo-cta";
+    const opening = isMago ? "mago-split" : "hero-photo";
+    const closing = isMago ? "mago-split" : "photo-cta";
+
+    const prompt = `Você é diretor de arte e editor de carrosséis do Instagram. Não desenhe imagens: devolva somente a direção estruturada em JSON.\nTema: ${tema}\nFamília: ${family}\nQuantidade: ${Math.min(10,Math.max(3,Number(slides)||6))}\nLayouts permitidos: ${layouts}.\nLimites rígidos por layout: ${JSON.stringify(LIMITS)}.\nUse ${opening} na abertura e ${closing} no fechamento. Escreva em português brasileiro, claro, elegante, sem clichês.\n${isMago ? "Identidade obrigatória: Mago das Tesouras, público 45+, editorial premium, fundo preto, dourado, foto vertical à direita, sem deformar imagem, CTA final para WhatsApp." : ""}\nFormato EXATO: {"id":"CAROUSEL","family":"${family}","title":"...","slides":[{"layout":"${opening}","eyebrow":"01 / 06","headline":"...","body":"...","items":[],"cta":""}]}`;
 
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`, {
       method: "POST", headers: { "content-type": "application/json" },
