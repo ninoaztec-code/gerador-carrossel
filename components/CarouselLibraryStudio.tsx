@@ -13,6 +13,9 @@ type TextSize = "small" | "medium" | "large";
 type TextBlock = "headline" | "body" | "cta";
 type TextMove = { x: number; y: number };
 type TextMoves = Record<TextBlock, TextMove>;
+type CardColors = { bg: string; text: string };
+
+type ColorPreset = { name: string; bg: string; text: string };
 
 const DEFAULT_PHOTO: PhotoCfg = { x: 0, y: 0, zoom: 100, fit: "cover" };
 const DEFAULT_COPY: CopyState = {
@@ -26,6 +29,15 @@ const DEFAULT_TEXT_MOVES: TextMoves = {
   cta: { x: 0, y: 0 }
 };
 
+const COLOR_PRESETS: ColorPreset[] = [
+  { name: "Off-white + vinho", bg: "#F7F2EC", text: "#703C49" },
+  { name: "Bege + marrom", bg: "#E7D8CB", text: "#493731" },
+  { name: "Vinho + creme", bg: "#703C49", text: "#F7F2EC" },
+  { name: "Terracota + creme", bg: "#92533D", text: "#F7F2EC" },
+  { name: "Preto + creme", bg: "#25201E", text: "#F7F2EC" },
+  { name: "Rosé + vinho", bg: "#D3A29A", text: "#703C49" }
+];
+
 const TEXT_SCALES: Record<TextSize, { headline: number; body: number; cta: number; headlineLine: number; bodyLine: number; gapBody: number; gapCta: number }> = {
   small: { headline: 27, body: 12, cta: 12, headlineLine: 1.08, bodyLine: 1.48, gapBody: 15, gapCta: 16 },
   medium: { headline: 32, body: 15, cta: 14, headlineLine: 1.06, bodyLine: 1.5, gapBody: 18, gapCta: 20 },
@@ -37,13 +49,11 @@ function colorOf(name?: string) {
   const colors: Record<string, string> = LIBRARY_COLORS;
   return colors[name] ?? name;
 }
-
-function photoKey(templateId: string, cardIndex: number, slotIndex: number) {
-  return `${templateId}:${cardIndex}:${slotIndex}`;
-}
+function photoKey(templateId: string, cardIndex: number, slotIndex: number) { return `${templateId}:${cardIndex}:${slotIndex}`; }
 function copyKey(templateId: string, cardIndex: number) { return `${templateId}:${cardIndex}`; }
 function textSizeKey(templateId: string, cardIndex: number) { return `${templateId}:${cardIndex}`; }
 function textMoveKey(templateId: string, cardIndex: number) { return `${templateId}:${cardIndex}`; }
+function colorKey(templateId: string, cardIndex: number) { return `${templateId}:${cardIndex}`; }
 
 function radiusOf(box: Box) {
   if (box.radius) return box.radius;
@@ -53,19 +63,22 @@ function radiusOf(box: Box) {
   if (box.shape === "arco_invertido") return "18px 18px 50% 50%";
   return "18px";
 }
-
 function clipPathOf(box: Box) {
   if (box.shape === "circulo" || box.shape === "oval" || box.shape === "oval_vertical") return "ellipse(50% 50% at 50% 50%)";
   return undefined;
 }
-
 function isDark(bg: string) {
-  return [LIBRARY_COLORS.terracota, LIBRARY_COLORS.vinho, LIBRARY_COLORS.marrom, LIBRARY_COLORS.preto].includes(bg as never);
+  const clean = bg.replace("#", "");
+  if (clean.length !== 6) return false;
+  const r = parseInt(clean.slice(0, 2), 16), g = parseInt(clean.slice(2, 4), 16), b = parseInt(clean.slice(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 135;
+}
+function defaultColors(card: LibraryCard): CardColors {
+  const bg = colorOf(card.bg);
+  return { bg, text: isDark(bg) ? "#F7F2EC" : "#493731" };
 }
 
-function Canvas({
-  template, card, cardIndex, images, photoCfgs, copy, textSize, textMoves, onSlot
-}: {
+function Canvas({ template, card, cardIndex, images, photoCfgs, copy, textSize, textMoves, colors, onSlot }: {
   template: LibraryTemplate;
   card: LibraryCard;
   cardIndex: number;
@@ -74,16 +87,14 @@ function Canvas({
   copy: CopyState;
   textSize: TextSize;
   textMoves: TextMoves;
+  colors: CardColors;
   onSlot: (index: number) => void;
 }) {
-  const bg = colorOf(card.bg);
-  const ink = isDark(bg) ? "#FFF9F4" : "#493731";
   const mainText = card.headline ?? card.text ?? card.cta ?? { x: 7, y: 18, w: 40 };
   const scale = TEXT_SCALES[textSize];
-
   return (
-    <div style={{ width: W, height: H, position: "relative", overflow: "hidden", background: bg, color: ink }}>
-      <div style={{ position: "absolute", left: 30, top: 26, zIndex: 5, color: ink }}>
+    <div style={{ width: W, height: H, position: "relative", overflow: "hidden", background: colors.bg, color: colors.text }}>
+      <div style={{ position: "absolute", left: 30, top: 26, zIndex: 5, color: colors.text }}>
         <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: ".2em" }}>MAGO DAS TESOURAS</div>
         <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: ".16em", marginTop: 5 }}>45+</div>
         <div style={{ fontSize: 9, letterSpacing: ".12em", marginTop: 12 }}>{String(cardIndex + 1).padStart(2, "0")} / 05 · {template.id}</div>
@@ -107,8 +118,7 @@ function Canvas({
       })}
 
       {card.number ? <div style={{ position: "absolute", left: "44%", top: "12%", fontFamily: "Georgia,serif", fontSize: 100, fontWeight: 700, opacity: .12 }}>{card.number}</div> : null}
-
-      <div style={{ position: "absolute", left: `${mainText.x}%`, top: `${mainText.y}%`, width: `${mainText.w}%`, zIndex: 3 }}>
+      <div style={{ position: "absolute", left: `${mainText.x}%`, top: `${mainText.y}%`, width: `${mainText.w}%`, zIndex: 3, color: colors.text }}>
         <div style={{ transform: `translate(${textMoves.headline.x}px, ${textMoves.headline.y}px)`, fontFamily: "Georgia,serif", fontSize: scale.headline, lineHeight: scale.headlineLine, fontWeight: 700 }}>{copy.headline}</div>
         <div style={{ transform: `translate(${textMoves.body.x}px, ${textMoves.body.y}px)`, marginTop: scale.gapBody, fontSize: scale.body, lineHeight: scale.bodyLine, fontWeight: 500 }}>{copy.body}</div>
         <div style={{ transform: `translate(${textMoves.cta.x}px, ${textMoves.cta.y}px)`, marginTop: scale.gapCta, fontSize: scale.cta, lineHeight: 1.25, fontWeight: 800, letterSpacing: ".01em" }}>{copy.cta}</div>
@@ -126,6 +136,7 @@ export default function CarouselLibraryStudio() {
   const [copies, setCopies] = useState<Record<string, CopyState>>({});
   const [textSizes, setTextSizes] = useState<Record<string, TextSize>>({});
   const [textMovesByCard, setTextMovesByCard] = useState<Record<string, TextMoves>>({});
+  const [colorsByCard, setColorsByCard] = useState<Record<string, CardColors>>({});
   const [activeTextBlock, setActiveTextBlock] = useState<TextBlock>("headline");
 
   const template = INSTAGRAM_45PLUS_LIBRARY.find((item) => item.id === templateId) ?? INSTAGRAM_45PLUS_LIBRARY[0];
@@ -138,20 +149,18 @@ export default function CarouselLibraryStudio() {
   const cKey = copyKey(template.id, cardIndex);
   const sizeKey = textSizeKey(template.id, cardIndex);
   const moveKey = textMoveKey(template.id, cardIndex);
+  const currentColorKey = colorKey(template.id, cardIndex);
   const photoCfg = photoCfgs[pKey] ?? DEFAULT_PHOTO;
   const copy = copies[cKey] ?? DEFAULT_COPY;
   const textSize = textSizes[sizeKey] ?? "medium";
   const textMoves = textMovesByCard[moveKey] ?? DEFAULT_TEXT_MOVES;
   const activeMove = textMoves[activeTextBlock];
+  const colors = colorsByCard[currentColorKey] ?? defaultColors(card);
 
   const control = { width: "100%", padding: 9, marginTop: 6, boxSizing: "border-box" as const, background: "#151515", color: "#fff", border: "1px solid #444", borderRadius: 8 };
 
-  function patchPhoto(patch: Partial<PhotoCfg>) {
-    setPhotoCfgs((current) => ({ ...current, [pKey]: { ...(current[pKey] ?? DEFAULT_PHOTO), ...patch } }));
-  }
-  function patchCopy(patch: Partial<CopyState>) {
-    setCopies((current) => ({ ...current, [cKey]: { ...(current[cKey] ?? DEFAULT_COPY), ...patch } }));
-  }
+  function patchPhoto(patch: Partial<PhotoCfg>) { setPhotoCfgs((current) => ({ ...current, [pKey]: { ...(current[pKey] ?? DEFAULT_PHOTO), ...patch } })); }
+  function patchCopy(patch: Partial<CopyState>) { setCopies((current) => ({ ...current, [cKey]: { ...(current[cKey] ?? DEFAULT_COPY), ...patch } })); }
   function patchTextMove(patch: Partial<TextMove>) {
     setTextMovesByCard((current) => {
       const base = current[moveKey] ?? DEFAULT_TEXT_MOVES;
@@ -159,7 +168,19 @@ export default function CarouselLibraryStudio() {
     });
   }
   function resetTextMoves() {
-    setTextMovesByCard((current) => ({ ...current, [moveKey]: { ...DEFAULT_TEXT_MOVES, headline: { ...DEFAULT_TEXT_MOVES.headline }, body: { ...DEFAULT_TEXT_MOVES.body }, cta: { ...DEFAULT_TEXT_MOVES.cta } } }));
+    setTextMovesByCard((current) => ({ ...current, [moveKey]: { headline: { x: 0, y: 0 }, body: { x: 0, y: 0 }, cta: { x: 0, y: 0 } } }));
+  }
+  function setCardColors(next: CardColors) { setColorsByCard((current) => ({ ...current, [currentColorKey]: next })); }
+  function applyPreset(preset: ColorPreset, allCards: boolean) {
+    if (!allCards) return setCardColors({ bg: preset.bg, text: preset.text });
+    setColorsByCard((current) => {
+      const next = { ...current };
+      template.cards.forEach((_, index) => { next[colorKey(template.id, index)] = { bg: preset.bg, text: preset.text }; });
+      return next;
+    });
+  }
+  function resetColors() {
+    setColorsByCard((current) => { const next = { ...current }; delete next[currentColorKey]; return next; });
   }
   function uploadPhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -200,6 +221,22 @@ export default function CarouselLibraryStudio() {
           <label>Zoom {photoCfg.zoom}%</label><input type="range" min="70" max="220" value={photoCfg.zoom} onChange={(e) => patchPhoto({ zoom: Number(e.target.value) })} style={{ width: "100%" }} />
 
           <hr style={{ borderColor: "#333", margin: "16px 0" }} />
+          <strong>Cores do card</strong>
+          <div style={{ fontSize: 11, opacity: .65, marginTop: 5 }}>Troque fundo e letras sem alterar fotos ou estrutura do template.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 10 }}>
+            <label>Fundo<input type="color" value={colors.bg} onChange={(e) => setCardColors({ ...colors, bg: e.target.value })} style={{ width: "100%", height: 38, marginTop: 5 }} /></label>
+            <label>Letras<input type="color" value={colors.text} onChange={(e) => setCardColors({ ...colors, text: e.target.value })} style={{ width: "100%", height: 38, marginTop: 5 }} /></label>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 10 }}>
+            {COLOR_PRESETS.map((preset) => <button key={preset.name} type="button" onClick={() => applyPreset(preset, false)} style={{ padding: 8, background: preset.bg, color: preset.text, border: "1px solid #777", borderRadius: 8, fontWeight: 700 }}>{preset.name}</button>)}
+          </div>
+          <select defaultValue="" onChange={(e) => { const preset = COLOR_PRESETS.find((item) => item.name === e.target.value); if (preset) applyPreset(preset, true); e.currentTarget.value = ""; }} style={{ ...control, marginTop: 10 }}>
+            <option value="" disabled>Aplicar preset aos 5 cards...</option>
+            {COLOR_PRESETS.map((preset) => <option key={preset.name} value={preset.name}>{preset.name}</option>)}
+          </select>
+          <button type="button" onClick={resetColors} style={{ width: "100%", marginTop: 7 }}>Restaurar cores deste card</button>
+
+          <hr style={{ borderColor: "#333", margin: "16px 0" }} />
           <label>Tamanho do texto</label>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 6, marginTop: 8 }}>
             {(["small", "medium", "large"] as TextSize[]).map((size) => {
@@ -220,7 +257,6 @@ export default function CarouselLibraryStudio() {
           <label>Mover texto X {activeMove.x}px</label><input type="range" min="-260" max="260" value={activeMove.x} onChange={(e) => patchTextMove({ x: Number(e.target.value) })} style={{ width: "100%" }} />
           <label>Mover texto Y {activeMove.y}px</label><input type="range" min="-320" max="320" value={activeMove.y} onChange={(e) => patchTextMove({ y: Number(e.target.value) })} style={{ width: "100%" }} />
           <button type="button" onClick={resetTextMoves} style={{ width: "100%", marginTop: 7 }}>Resetar posições dos textos</button>
-          <div style={{ fontSize: 11, opacity: .65, marginTop: 7 }}>Cada bloco pode ser deslocado para esquerda, direita, cima ou baixo sem alterar a posição-base do template.</div>
 
           <label style={{ display: "block", marginTop: 12 }}>Headline</label><textarea value={copy.headline} onChange={(e) => patchCopy({ headline: e.target.value })} rows={3} style={control} />
           <label style={{ display: "block", marginTop: 8 }}>Texto</label><textarea value={copy.body} onChange={(e) => patchCopy({ body: e.target.value })} rows={3} style={control} />
@@ -229,7 +265,7 @@ export default function CarouselLibraryStudio() {
 
         <section>
           <div style={{ width: W, height: H, margin: "0 auto", boxShadow: "0 22px 70px #0009" }}>
-            <Canvas template={template} card={card} cardIndex={cardIndex} images={images} photoCfgs={photoCfgs} copy={copy} textSize={textSize} textMoves={textMoves} onSlot={setSlotIndex} />
+            <Canvas template={template} card={card} cardIndex={cardIndex} images={images} photoCfgs={photoCfgs} copy={copy} textSize={textSize} textMoves={textMoves} colors={colors} onSlot={setSlotIndex} />
           </div>
         </section>
       </div>
