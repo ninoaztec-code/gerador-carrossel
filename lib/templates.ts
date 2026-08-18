@@ -21,9 +21,9 @@ export const TEMPLATES: Record<TemplateId, { name: string; description: string; 
   },
   "mago-rose": {
     name: "Template 2 · Editorial Vinho 45+",
-    description: "Remodelado card a card: capa tipográfica, três cards de corte com foto à direita e fechamento com CTA.",
+    description: "Base editorial com placeholders reais de foto; Card 4 inicia com retrato vertical à esquerda e texto à direita.",
     document: {
-      id: "MAGO-ROSE-002",
+      id: "MAGO-ROSE-003",
       family: "mago-editorial-rose",
       title: "Cortes para mulheres 45+",
       slides: [
@@ -47,7 +47,7 @@ export const TEMPLATES: Record<TemplateId, { name: string; description: string; 
           body: "Leveza, atitude e personalidade."
         },
         {
-          layout: "statement-portrait",
+          layout: "mago-split",
           eyebrow: "04 / 05",
           headline: "3. BOB EM CAMADAS",
           body: "Movimento para transformar o visual."
