@@ -35,8 +35,18 @@ function radiusOf(box: Box) {
   if (box.radius) return box.radius;
   if (box.shape === "oval" || box.shape === "oval_vertical" || box.shape === "circulo") return "50%";
   if (box.shape?.includes("capsula")) return "999px";
-  if (box.shape?.includes("arco")) return "50% 50% 18px 18px";
+  if (box.shape === "arco") return "50% 50% 18px 18px";
+  if (box.shape === "arco_invertido") return "18px 18px 50% 50%";
   return "18px";
+}
+
+function clipPathOf(box: Box) {
+  if (box.shape === "oval" || box.shape === "oval_vertical" || box.shape === "circulo") return "ellipse(50% 50% at 50% 50%)";
+  if (box.shape?.includes("capsula")) return "inset(0 round 999px)";
+  if (box.shape === "arco") return "inset(0 round 50% 50% 18px 18px)";
+  if (box.shape === "arco_invertido") return "inset(0 round 18px 18px 50% 50%)";
+  if (box.radius) return `inset(0 round ${box.radius})`;
+  return "inset(0 round 18px)";
 }
 
 function isDark(bg: string) {
@@ -76,6 +86,8 @@ function Canvas({
         const key = photoKey(template.id, cardIndex, slotIndex);
         const image = images[key];
         const cfg = photoCfgs[key] ?? DEFAULT_PHOTO;
+        const radius = radiusOf(box);
+        const clipPath = clipPathOf(box);
         return (
           <button
             type="button"
@@ -88,35 +100,52 @@ function Canvas({
               width: `${box.w}%`,
               height: `${box.h}%`,
               padding: 0,
-              borderRadius: radiusOf(box),
+              border: 0,
+              borderRadius: radius,
+              clipPath,
               overflow: "hidden",
-              border: "1px dashed #A77C69",
               background: "#E9DED4",
               color: "#755547",
               zIndex: 2,
-              cursor: "pointer"
+              cursor: "pointer",
+              isolation: "isolate"
             }}
           >
+            <span
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                border: "1px dashed #A77C69",
+                borderRadius: radius,
+                clipPath,
+                pointerEvents: "none",
+                zIndex: 4,
+                boxSizing: "border-box"
+              }}
+            />
             {image ? (
-              <img
-                src={image}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  display: "block",
-                  objectFit: cfg.fit,
-                  transform: `translate(${cfg.x}px, ${cfg.y}px) scale(${cfg.zoom / 100})`,
-                  transformOrigin: "center"
-                }}
-              />
+              <span style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: radius, clipPath }}>
+                <img
+                  src={image}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    objectFit: cfg.fit,
+                    transform: `translate(${cfg.x}px, ${cfg.y}px) scale(${cfg.zoom / 100})`,
+                    transformOrigin: "center"
+                  }}
+                />
+              </span>
             ) : (
               <span style={{ display: "flex", width: "100%", height: "100%", alignItems: "center", justifyContent: "center", padding: 12, boxSizing: "border-box", textAlign: "center", fontSize: 10, fontWeight: 800, letterSpacing: ".1em" }}>
                 COLOQUE SUA FOTO AQUI
               </span>
             )}
             {card.labels?.[slotIndex] ? (
-              <span style={{ position: "absolute", left: 8, top: 8, background: "rgba(37,32,30,.82)", color: "white", padding: "4px 7px", borderRadius: 10, fontSize: 8, fontWeight: 800 }}>
+              <span style={{ position: "absolute", left: 8, top: 8, background: "rgba(37,32,30,.82)", color: "white", padding: "4px 7px", borderRadius: 10, fontSize: 8, fontWeight: 800, zIndex: 5 }}>
                 {card.labels[slotIndex]}
               </span>
             ) : null}
@@ -179,7 +208,7 @@ export default function CarouselLibraryStudio() {
       <div style={{ maxWidth: 1450, margin: "auto", display: "grid", gridTemplateColumns: "400px 1fr", gap: 24 }}>
         <aside style={{ background: "#202020", borderRadius: 18, padding: 18, maxHeight: "calc(100vh - 44px)", overflowY: "auto" }}>
           <h1 style={{ margin: "0 0 4px" }}>Carousel Studio · Biblioteca 45+</h1>
-          <p style={{ opacity: .65, marginTop: 4 }}>12 templates · 60 layouts-base · 1080×1350</p>
+          <p style={{ opacity: .65, marginTop: 4 }}>12 templates · 60 layouts-base · máscaras reais de foto</p>
 
           <label>Template visual</label>
           <select value={templateId} onChange={(e) => { setTemplateId(e.target.value); setCardIndex(0); setSlotIndex(0); }} style={control}>
@@ -199,9 +228,9 @@ export default function CarouselLibraryStudio() {
           </select>
 
           <input type="file" accept="image/*" onChange={uploadPhoto} style={{ marginTop: 10 }} />
-          <label style={{ display: "block", marginTop: 10 }}>Encaixe</label>
+          <label style={{ display: "block", marginTop: 10 }}>Encaixe dentro da moldura</label>
           <select value={photoCfg.fit} onChange={(e) => patchPhoto({ fit: e.target.value as "cover" | "contain" })} style={control}>
-            <option value="cover">Cover</option><option value="contain">Contain</option>
+            <option value="cover">Preencher molde</option><option value="contain">Mostrar foto inteira</option>
           </select>
           <label>Mover X {photoCfg.x}px</label><input type="range" min="-220" max="220" value={photoCfg.x} onChange={(e) => patchPhoto({ x: Number(e.target.value) })} style={{ width: "100%" }} />
           <label>Mover Y {photoCfg.y}px</label><input type="range" min="-220" max="220" value={photoCfg.y} onChange={(e) => patchPhoto({ y: Number(e.target.value) })} style={{ width: "100%" }} />
