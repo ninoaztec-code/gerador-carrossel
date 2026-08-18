@@ -1,4 +1,4 @@
-export type FamilyId = "editorial-premium" | "mago-editorial-premium" | "organic" | "educational" | "clean-white";
+export type FamilyId = "editorial-premium" | "mago-editorial-premium" | "mago-editorial-rose" | "organic" | "educational" | "clean-white";
 export type LayoutId = "hero-photo" | "mago-split" | "statement-portrait" | "feature-list" | "checklist" | "quote" | "photo-cta";
 
 export type CarouselSlide = {
@@ -20,7 +20,8 @@ export type CarouselDocument = {
 
 export const FAMILIES = {
   "editorial-premium": { name: "Editorial Premium", bg: "#F7F3ED", ink: "#0F0F10", accent: "#C59A6B", support: "#8A6D54", serif: "Georgia, serif", sans: "Arial, sans-serif" },
-  "mago-editorial-premium": { name: "Mago Editorial Premium", bg: "#0A0A0A", ink: "#F4F0E8", accent: "#D1A065", support: "#2A2018", serif: "Georgia, serif", sans: "Arial, sans-serif" },
+  "mago-editorial-premium": { name: "Mago Dark / Dourado", bg: "#0A0A0A", ink: "#F4F0E8", accent: "#D1A065", support: "#2A2018", serif: "Georgia, serif", sans: "Arial, sans-serif" },
+  "mago-editorial-rose": { name: "Mago Rose Editorial", bg: "#E8D8C8", ink: "#403632", accent: "#743F4B", support: "#D6A49A", serif: "Georgia, serif", sans: "Arial, sans-serif" },
   organic: { name: "Orgânico Terracota", bg: "#F7F0E8", ink: "#3B241C", accent: "#9A4F35", support: "#D4A06F", serif: "Georgia, serif", sans: "Arial, sans-serif" },
   educational: { name: "Minimal Educacional", bg: "#F4F6F5", ink: "#172124", accent: "#4C8A91", support: "#B8D5D8", serif: "Georgia, serif", sans: "Arial, sans-serif" },
   "clean-white": { name: "Clean White", bg: "#FFFFFF", ink: "#111111", accent: "#B98B5F", support: "#EEE9E3", serif: "Georgia, serif", sans: "Arial, sans-serif" },
