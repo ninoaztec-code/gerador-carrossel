@@ -20,18 +20,45 @@ export const TEMPLATES: Record<TemplateId, { name: string; description: string; 
     }
   },
   "mago-rose": {
-    name: "Template 2 · Rose Editorial",
-    description: "Bege, creme, rosé e vinho; sequência feminina premium com números grandes e continuidade visual.",
+    name: "Template 2 · Editorial Vinho 45+",
+    description: "Remodelado card a card: capa tipográfica, três cards de corte com foto à direita e fechamento com CTA.",
     document: {
-      id: "MAGO-ROSE-001",
+      id: "MAGO-ROSE-002",
       family: "mago-editorial-rose",
-      title: "5 cortes para arrasar depois dos 45",
+      title: "Cortes para mulheres 45+",
       slides: [
-        { layout: "hero-photo", eyebrow: "01 / 05", headline: "5 CORTES PARA ARRASAR DEPOIS DOS 45", body: "Modernos, elegantes e cheios de personalidade." },
-        { layout: "statement-portrait", eyebrow: "02 / 05", headline: "1. LONG BOB", body: "Um clássico que continua moderno." },
-        { layout: "statement-portrait", eyebrow: "03 / 05", headline: "2. PIXIE ALONGADO", body: "Leveza, atitude e personalidade." },
-        { layout: "statement-portrait", eyebrow: "04 / 05", headline: "3. BOB EM CAMADAS", body: "Movimento para transformar o visual." },
-        { layout: "photo-cta", eyebrow: "05 / 05", headline: "QUAL É A SUA ESCOLHA?", body: "Seu cabelo não tem idade. Ele tem personalidade.", cta: "Comente: 1, 2 ou 3" }
+        {
+          layout: "quote",
+          eyebrow: "01 / 05",
+          headline: "Um bom corte acompanha quem você é hoje.",
+          body: "Movimento, moldura do rosto e manutenção possível fazem diferença.",
+          cta: "Agende seu corte pelo WhatsApp."
+        },
+        {
+          layout: "statement-portrait",
+          eyebrow: "02 / 05",
+          headline: "1. LONG BOB",
+          body: "Um clássico que continua moderno."
+        },
+        {
+          layout: "statement-portrait",
+          eyebrow: "03 / 05",
+          headline: "2. PIXIE ALONGADO",
+          body: "Leveza, atitude e personalidade."
+        },
+        {
+          layout: "statement-portrait",
+          eyebrow: "04 / 05",
+          headline: "3. BOB EM CAMADAS",
+          body: "Movimento para transformar o visual."
+        },
+        {
+          layout: "photo-cta",
+          eyebrow: "05 / 05",
+          headline: "5 CORTES PARA ARRASAR DEPOIS DOS 45",
+          body: "Modernos, elegantes e cheios de personalidade.",
+          cta: "Agende seu corte pelo WhatsApp."
+        }
       ]
     }
   }
