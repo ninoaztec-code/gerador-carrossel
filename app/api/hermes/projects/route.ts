@@ -36,6 +36,11 @@ function authorized(req: NextRequest) {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
+function publicOrigin(req: NextRequest) {
+  const configured = process.env.CAROUSEL_API_BASE?.trim().replace(/\/+$/, "");
+  return configured || req.nextUrl.origin;
+}
+
 function validate(project: HermesProject) {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -55,14 +60,16 @@ function validate(project: HermesProject) {
 }
 
 export async function GET(req: NextRequest) {
+  const origin = publicOrigin(req);
   return NextResponse.json({
     ok: true,
     service: "hermes-studio-project-bridge",
     endpoint: "/api/hermes/projects",
     method: "POST",
     purpose: "Salva o projeto na VPS e devolve links do Studio e do render.",
-    studio_origin: req.nextUrl.origin,
-    render_endpoint: `${req.nextUrl.origin}/api/hermes/render-project?project_id=PROJECT_ID`,
+    studio_origin: origin,
+    studio_example: `${origin}/studio?project=PROJECT_ID`,
+    render_endpoint: `${origin}/api/hermes/render-project?project_id=PROJECT_ID`,
   });
 }
 
@@ -85,9 +92,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "vps_project_save_failed", remote_status: result.status, remote: result.data }, { status: 502 });
     }
 
+    const origin = publicOrigin(req);
     const encodedId = encodeURIComponent(normalized.project_id);
-    const studioUrl = `${req.nextUrl.origin}/studio?project=${encodedId}`;
-    const renderHtmlUrl = `${req.nextUrl.origin}/api/hermes/render-project?project_id=${encodedId}`;
+    const studioUrl = `${origin}/studio?project=${encodedId}`;
+    const renderHtmlUrl = `${origin}/api/hermes/render-project?project_id=${encodedId}`;
     const renderCards = normalized.cards.map((card) => ({
       card: card.card,
       html_url: `${renderHtmlUrl}&card=${card.card}`,
@@ -100,10 +108,11 @@ export async function POST(req: NextRequest) {
       project_id: normalized.project_id,
       template: normalized.template,
       studio_url: studioUrl,
+      review_url: studioUrl,
       render_html_url: renderHtmlUrl,
       render_cards: renderCards,
       warnings,
-      status: "ready_to_render",
+      status: "ready_for_review",
     });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
