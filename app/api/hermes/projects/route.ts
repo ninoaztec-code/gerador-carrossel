@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { carouselPublicOrigin } from "@/lib/carouselPublicOrigin";
 import { createRemoteProject, putRemoteProject } from "@/lib/remoteCarouselProjects";
 
 export const runtime = "nodejs";
@@ -36,9 +37,8 @@ function authorized(req: NextRequest) {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-function publicOrigin(req: NextRequest) {
-  const configured = process.env.CAROUSEL_API_BASE?.trim().replace(/\/+$/, "");
-  return configured || req.nextUrl.origin;
+function buildCommit() {
+  return process.env.APP_GIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
 }
 
 function validate(project: HermesProject) {
@@ -60,16 +60,18 @@ function validate(project: HermesProject) {
 }
 
 export async function GET(req: NextRequest) {
-  const origin = publicOrigin(req);
+  const origin = carouselPublicOrigin(req);
   return NextResponse.json({
     ok: true,
     service: "hermes-studio-project-bridge",
     endpoint: "/api/hermes/projects",
     method: "POST",
-    purpose: "Salva o projeto na VPS e devolve links do Studio e do render.",
+    purpose: "Salva o projeto e devolve links do Studio e do render.",
+    persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
     studio_origin: origin,
     studio_example: `${origin}/studio?project=PROJECT_ID`,
     render_endpoint: `${origin}/api/hermes/render-project?project_id=PROJECT_ID`,
+    build: { commit: buildCommit() },
   });
 }
 
@@ -89,16 +91,23 @@ export async function POST(req: NextRequest) {
     let result = await createRemoteProject(normalized);
     if (result.status === 409) result = await putRemoteProject(normalized.project_id, normalized);
     if (!result.ok) {
-      return NextResponse.json({ ok: false, error: "vps_project_save_failed", remote_status: result.status, remote: result.data }, { status: 502 });
+      return NextResponse.json({
+        ok: false,
+        error: "project_save_failed",
+        persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
+        remote_status: result.status,
+        remote: result.data,
+        build: { commit: buildCommit() },
+      }, { status: 502 });
     }
 
-    const origin = publicOrigin(req);
+    const origin = carouselPublicOrigin(req);
     const encodedId = encodeURIComponent(normalized.project_id);
     const studioUrl = `${origin}/studio?project=${encodedId}`;
-    const renderHtmlUrl = `${origin}/api/hermes/render-project?project_id=${encodedId}`;
+    const renderProjectUrl = `${origin}/api/hermes/render-project?project_id=${encodedId}`;
     const renderCards = normalized.cards.map((card) => ({
       card: card.card,
-      html_url: `${renderHtmlUrl}&card=${card.card}`,
+      html_url: `${renderProjectUrl}&card=${card.card}`,
       width: 1080,
       height: 1350,
     }));
@@ -109,12 +118,14 @@ export async function POST(req: NextRequest) {
       template: normalized.template,
       studio_url: studioUrl,
       review_url: studioUrl,
-      render_html_url: renderHtmlUrl,
+      render_html_url: renderProjectUrl,
       render_cards: renderCards,
       warnings,
+      persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
       status: "ready_for_review",
+      build: { commit: buildCommit() },
     });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
+    return NextResponse.json({ ok: false, error: String(error), build: { commit: buildCommit() } }, { status: 500 });
   }
 }
