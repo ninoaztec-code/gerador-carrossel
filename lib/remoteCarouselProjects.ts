@@ -17,13 +17,27 @@ function authHeaders(extra?: HeadersInit): HeadersInit {
   };
 }
 
+async function jsonResult(response: Response) {
+  const data = await response.json().catch(() => null);
+  return { ok: response.ok, status: response.status, data };
+}
+
+export async function createRemoteProject(body: unknown) {
+  const response = await fetch(`${baseUrl()}/projects`, {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json", Accept: "application/json" }),
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  return jsonResult(response);
+}
+
 export async function getRemoteProject(projectId: string) {
   const response = await fetch(`${baseUrl()}/projects/${encodeURIComponent(projectId)}`, {
     headers: authHeaders({ Accept: "application/json" }),
     cache: "no-store",
   });
-  if (!response.ok) return { ok: false as const, status: response.status, data: null };
-  return { ok: true as const, status: response.status, data: await response.json() };
+  return jsonResult(response);
 }
 
 export async function putRemoteProject(projectId: string, body: unknown) {
@@ -33,8 +47,7 @@ export async function putRemoteProject(projectId: string, body: unknown) {
     body: JSON.stringify(body),
     cache: "no-store",
   });
-  const data = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, data };
+  return jsonResult(response);
 }
 
 export async function deleteRemoteProject(projectId: string) {
@@ -43,8 +56,7 @@ export async function deleteRemoteProject(projectId: string) {
     headers: authHeaders({ "X-Confirm-Delete": "true", Accept: "application/json" }),
     cache: "no-store",
   });
-  const data = await response.json().catch(() => null);
-  return { ok: response.ok, status: response.status, data };
+  return jsonResult(response);
 }
 
 export async function getRemoteImage(photoId: string) {
