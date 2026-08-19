@@ -1,0 +1,22 @@
+services:
+  gerador-carrossel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gerador-carrossel
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HERMES_API_KEY: ${HERMES_API_KEY:-}
+      CAROUSEL_API_KEY: ${CAROUSEL_API_KEY:?CAROUSEL_API_KEY obrigatoria}
+      CAROUSEL_API_BASE: ${CAROUSEL_API_BASE:-https://carrossel.magodastesouras.com.br}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+    ports:
+      - "127.0.0.1:3007:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/hermes/projects').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
