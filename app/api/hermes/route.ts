@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CarouselDocument, validateCarousel } from "@/lib/carousel";
+import { carouselPublicOrigin } from "@/lib/carouselPublicOrigin";
 import { createRemoteProject, putRemoteProject } from "@/lib/remoteCarouselProjects";
 
 export const runtime = "nodejs";
@@ -37,13 +38,8 @@ function authorized(req: NextRequest) {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-function publicOrigin(req: NextRequest) {
-  const configured = process.env.CAROUSEL_API_BASE?.trim().replace(/\/+$/, "");
-  return configured || req.nextUrl.origin;
-}
-
 function renderHtmlUrl(req: NextRequest) {
-  return new URL("/api/hermes/render-html", req.nextUrl.origin).toString();
+  return `${carouselPublicOrigin(req)}/api/hermes/render-html`;
 }
 
 function buildCommit() {
@@ -97,13 +93,13 @@ async function acceptHermesProject(req: NextRequest, project: HermesCarouselDocu
     }, { status: 502 });
   }
 
-  const origin = publicOrigin(req);
+  const origin = carouselPublicOrigin(req);
   const encodedId = encodeURIComponent(normalized.project_id);
   const studioUrl = `${origin}/studio?project=${encodedId}`;
-  const renderHtmlUrl = `${origin}/api/hermes/render-project?project_id=${encodedId}`;
+  const renderProjectUrl = `${origin}/api/hermes/render-project?project_id=${encodedId}`;
   const renderCards = normalized.cards.map((card) => ({
     card: card.card,
-    html_url: `${renderHtmlUrl}&card=${card.card}`,
+    html_url: `${renderProjectUrl}&card=${card.card}`,
     width: 1080,
     height: 1350,
   }));
@@ -115,7 +111,7 @@ async function acceptHermesProject(req: NextRequest, project: HermesCarouselDocu
     template: normalized.template,
     studio_url: studioUrl,
     review_url: studioUrl,
-    render_html_url: renderHtmlUrl,
+    render_html_url: renderProjectUrl,
     render_cards: renderCards,
     warnings,
     status: "ready_for_review",
@@ -124,7 +120,7 @@ async function acceptHermesProject(req: NextRequest, project: HermesCarouselDocu
 }
 
 export async function GET(req: NextRequest) {
-  const origin = publicOrigin(req);
+  const origin = carouselPublicOrigin(req);
   return NextResponse.json({
     ok: true,
     service: "gerador-carrossel",
@@ -167,11 +163,12 @@ export async function POST(req: NextRequest) {
     const errors = validateCarousel(doc);
     if (errors.length) return NextResponse.json({ ok: false, errors, contract: "legacy-carousel-document" }, { status: 422 });
 
+    const origin = carouselPublicOrigin(req);
     return NextResponse.json({
       ok: true,
       contract: "legacy-carousel-document",
       document: doc,
-      studio: new URL("/studio", req.nextUrl.origin).toString(),
+      studio: `${origin}/studio`,
       render: {
         html: renderHtmlUrl(req),
         method: "POST",
