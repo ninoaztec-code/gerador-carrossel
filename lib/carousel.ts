@@ -1,6 +1,22 @@
 export type FamilyId = "editorial-premium" | "organic" | "educational" | "clean-white";
 export type LayoutId = "hero-photo" | "statement-portrait" | "feature-list" | "checklist" | "quote" | "photo-cta";
 
+export type PhotoBindingValue =
+  | string
+  | {
+      slot?: string;
+      url?: string;
+      src?: string;
+      image?: string;
+      path?: string;
+      photo_id?: string;
+      arquivo?: string;
+    };
+
+export type PhotoBindings =
+  | Record<string, PhotoBindingValue>
+  | PhotoBindingValue[];
+
 export type CarouselSlide = {
   layout: LayoutId;
   eyebrow?: string;
@@ -9,12 +25,18 @@ export type CarouselSlide = {
   items?: string[];
   cta?: string;
   image?: string;
+  template_card?: string | number;
+  photo_bindings?: PhotoBindings;
 };
 
 export type CarouselDocument = {
   id?: string;
   family: FamilyId;
   title?: string;
+  template?: string;
+  template_id?: string;
+  templateId?: string;
+  photo_bindings?: PhotoBindings | Record<string, PhotoBindings>;
   slides: CarouselSlide[];
 };
 
