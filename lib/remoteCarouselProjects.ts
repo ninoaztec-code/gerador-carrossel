@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { readLocalImage } from "@/lib/localCarouselImages";
 
 const PROJECT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 
@@ -173,6 +174,18 @@ export async function deleteRemoteProject(projectId: string) {
 }
 
 export async function getRemoteImage(photoId: string) {
+  const local = await readLocalImage(photoId);
+  if (local) {
+    return new Response(local.body, {
+      status: 200,
+      headers: {
+        "content-type": local.meta.content_type,
+        "content-length": String(local.body.length),
+        "x-carousel-photo-id": local.meta.photo_id,
+      },
+    });
+  }
+
   const base = imageBaseUrl();
   if (!base) return new Response(null, { status: 404 });
   return fetch(`${base}/library-images/${encodeURIComponent(photoId)}`, {
