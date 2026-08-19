@@ -2,11 +2,12 @@
 set -euo pipefail
 
 REPO_URL="https://github.com/ninoaztec-code/gerador-carrossel.git"
-DEFAULT_DIR="/root/hermes-workspace/gerador-carrossel-repo"
-APP_DIR="${APP_DIR:-$DEFAULT_DIR}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+APP_DIR="${APP_DIR:-$SCRIPT_REPO_DIR}"
 
-if [ ! -d "$APP_DIR/.git" ] && [ -d "/root/hermes-workspace/gerador-carrossel/.git" ]; then
-  APP_DIR="/root/hermes-workspace/gerador-carrossel"
+if [ ! -d "$APP_DIR/.git" ]; then
+  APP_DIR="/opt/gerador-carrossel"
 fi
 
 if [ -d "$APP_DIR/.git" ]; then
@@ -15,7 +16,7 @@ if [ -d "$APP_DIR/.git" ]; then
   git checkout main
   git pull --ff-only origin main
 else
-  mkdir -p "$(dirname "$APP_DIR")"
+  mkdir -p "$APP_DIR"
   git clone --branch main "$REPO_URL" "$APP_DIR"
   cd "$APP_DIR"
 fi
@@ -34,32 +35,49 @@ if [ -z "${CAROUSEL_API_KEY:-}" ]; then
   exit 2
 fi
 
+echo "DEPLOY_DIR=$APP_DIR"
+echo "DEPLOY_COMMIT=$APP_GIT_SHA"
+
 docker compose -f compose.vps.yml up -d --build
 
 docker compose -f compose.vps.yml ps
+
+echo "Aguardando gerador-carrossel ficar healthy..."
+healthy=""
+for _ in $(seq 1 60); do
+  status="$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' gerador-carrossel 2>/dev/null || true)"
+  if [ "$status" = "healthy" ]; then
+    healthy="yes"
+    break
+  fi
+  if [ "$status" = "unhealthy" ] || [ "$status" = "exited" ] || [ "$status" = "dead" ]; then
+    echo "ERRO: container em estado $status"
+    docker logs --tail 120 gerador-carrossel || true
+    exit 3
+  fi
+  sleep 1
+done
+
+if [ "$healthy" != "yes" ]; then
+  echo "ERRO: timeout aguardando healthcheck"
+  docker inspect --format='{{json .State.Health}}' gerador-carrossel || true
+  docker logs --tail 120 gerador-carrossel || true
+  exit 3
+fi
+
+echo "CONTAINER_HEALTH=healthy"
+container_sha="$(docker exec gerador-carrossel sh -lc 'printf %s "$APP_GIT_SHA"')"
+echo "CONTAINER_APP_GIT_SHA=${container_sha:-unknown}"
+if [ "$container_sha" != "$APP_GIT_SHA" ]; then
+  echo "ERRO: APP_GIT_SHA do container não corresponde ao commit implantado"
+  exit 4
+fi
 
 node <<'NODE'
 const base = "http://127.0.0.1:3007";
 const auth = process.env.HERMES_API_KEY
   ? { Authorization: `Bearer ${process.env.HERMES_API_KEY}` }
   : {};
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function fetchWithRetry(path, attempts = 30) {
-  let last;
-  for (let i = 0; i < attempts; i++) {
-    try {
-      const response = await fetch(`${base}${path}`, { headers: auth, cache: "no-store" });
-      if (response.ok) return response;
-      last = new Error(`${path}: HTTP ${response.status}`);
-    } catch (error) {
-      last = error;
-    }
-    await sleep(1000);
-  }
-  throw last || new Error(`${path}: indisponível`);
-}
 
 async function jsonRequest(path, init = {}) {
   const response = await fetch(`${base}${path}`, {
@@ -76,13 +94,17 @@ async function jsonRequest(path, init = {}) {
 }
 
 (async () => {
-  const healthResponse = await fetchWithRetry("/api/hermes/projects");
+  const healthResponse = await fetch(`${base}/api/hermes/projects`, { headers: auth, cache: "no-store" });
   const health = await healthResponse.json();
   console.log(`HEALTH_HTTP=${healthResponse.status}`);
   console.log(`PERSISTENCE=${health.persistence || "unknown"}`);
   console.log(`BUILD_COMMIT=${health.build?.commit || "unknown"}`);
+  if (!healthResponse.ok) throw new Error(`health HTTP ${healthResponse.status}`);
   if (health.persistence !== "local-volume") {
     throw new Error(`persistência inesperada: ${health.persistence || "unknown"}`);
+  }
+  if (health.build?.commit !== process.env.APP_GIT_SHA) {
+    throw new Error(`build commit inesperado: API=${health.build?.commit || "unknown"} deploy=${process.env.APP_GIT_SHA}`);
   }
 
   const projectId = `DEPLOY-SMOKE-${Date.now()}`;
