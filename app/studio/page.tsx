@@ -1,5 +1,5 @@
-import StudioEntry from "@/components/StudioEntry";
+import StudioEntryV2 from "@/components/StudioEntryV2";
 
 export default function StudioPage() {
-  return <StudioEntry />;
+  return <StudioEntryV2 />;
 }
