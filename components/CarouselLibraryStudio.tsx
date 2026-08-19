@@ -1,9 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import CarouselLibraryStudioV2 from "@/components/CarouselLibraryStudioV2";
+import { INSTAGRAM_45PLUS_LIBRARY } from "@/lib/instagramTemplateLibrary";
+import { cardKey, type ProjectState, type TextSize } from "@/lib/carouselProjectState";
+
+function applyTemplateDesignDefaults() {
+  if (typeof window === "undefined") return;
+  const projectId = new URLSearchParams(window.location.search).get("project");
+  if (!projectId) return;
+  const key = `mago-project:${projectId}`;
+  const raw = localStorage.getItem(key);
+  if (!raw) return;
+  try {
+    const state = JSON.parse(raw) as ProjectState;
+    const template = INSTAGRAM_45PLUS_LIBRARY.find((item) => item.id === String(state.templateId || "").toUpperCase());
+    if (!template) return;
+    const textSizes = { ...(state.textSizes || {}) };
+    const typeStyles = { ...(state.typeStyles || {}) };
+    let changed = false;
+    template.cards.forEach((card, index) => {
+      const cKey = cardKey(template.id, index);
+      if (!typeStyles[cKey]) {
+        typeStyles[cKey] = template.profile.preferredType;
+        changed = true;
+      }
+      if (!textSizes[cKey]) {
+        const size: TextSize = card.role === "cover" ? "large" : card.role === "cta" ? "medium" : "medium";
+        textSizes[cKey] = size;
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem(key, JSON.stringify({ ...state, textSizes, typeStyles }));
+  } catch {
+    // Mantém o estado existente se houver um projeto legado inválido.
+  }
+}
 
 export default function CarouselLibraryStudio() {
+  const normalized = useRef(false);
+  if (!normalized.current) {
+    applyTemplateDesignDefaults();
+    normalized.current = true;
+  }
   const [approving, setApproving] = useState(false);
 
   async function approveAndOpenRender() {
@@ -31,7 +70,6 @@ export default function CarouselLibraryStudio() {
       };
       localStorage.setItem(key, JSON.stringify(approved));
 
-      // StudioEntryV2 sincroniza o localStorage com a VPS em ciclos curtos.
       await new Promise((resolve) => window.setTimeout(resolve, 1700));
 
       const renderUrl = `/api/hermes/render-project?project_id=${encodeURIComponent(projectId)}`;
