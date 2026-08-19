@@ -9,12 +9,6 @@ type RemoteCard = {
   image_data_url?: string;
 };
 
-function authorized(req: NextRequest) {
-  const secret = process.env.HERMES_API_KEY;
-  if (!secret) return true;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
-
 function unwrapCards(raw: unknown): RemoteCard[] {
   const root = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const nested = (root.project && typeof root.project === "object" ? root.project :
@@ -31,9 +25,10 @@ function decodeImageDataUrl(value: string) {
   return { contentType, body };
 }
 
+// Esta rota é leitura pública por design: o Studio e o HTML de render são páginas
+// públicas e carregam estas imagens diretamente pelo navegador, que não possui o
+// HERMES_API_KEY. Rotas de criação/alteração continuam protegidas.
 export async function GET(req: NextRequest) {
-  if (!authorized(req)) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
-
   const projectId = req.nextUrl.searchParams.get("project_id")?.trim();
   const cardNumber = Number(req.nextUrl.searchParams.get("card") || 0);
   if (!projectId) return NextResponse.json({ ok: false, error: "project_id_obrigatorio" }, { status: 400 });
@@ -50,7 +45,7 @@ export async function GET(req: NextRequest) {
     status: 200,
     headers: {
       "content-type": decoded.contentType,
-      "cache-control": "private, max-age=3600",
+      "cache-control": "public, max-age=3600",
       "x-carousel-project": projectId,
       "x-carousel-card": String(cardNumber),
     },
