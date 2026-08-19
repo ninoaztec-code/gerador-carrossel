@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import CarouselLibraryStudioV2 from "@/components/CarouselLibraryStudioV2";
 import { INSTAGRAM_45PLUS_LIBRARY } from "@/lib/instagramTemplateLibrary";
 import { cardKey, type ProjectState, type TextSize } from "@/lib/carouselProjectState";
@@ -26,7 +26,7 @@ function applyTemplateDesignDefaults() {
         changed = true;
       }
       if (!textSizes[cKey]) {
-        const size: TextSize = card.role === "cover" ? "large" : card.role === "cta" ? "medium" : "medium";
+        const size: TextSize = card.role === "cover" ? "large" : "medium";
         textSizes[cKey] = size;
         changed = true;
       }
@@ -38,11 +38,7 @@ function applyTemplateDesignDefaults() {
 }
 
 export default function CarouselLibraryStudio() {
-  const normalized = useRef(false);
-  if (!normalized.current) {
-    applyTemplateDesignDefaults();
-    normalized.current = true;
-  }
+  applyTemplateDesignDefaults();
   const [approving, setApproving] = useState(false);
 
   async function approveAndOpenRender() {
@@ -69,9 +65,7 @@ export default function CarouselLibraryStudio() {
         updatedAt: new Date().toISOString(),
       };
       localStorage.setItem(key, JSON.stringify(approved));
-
       await new Promise((resolve) => window.setTimeout(resolve, 1700));
-
       const renderUrl = `/api/hermes/render-project?project_id=${encodeURIComponent(projectId)}`;
       if (popup) popup.location.href = renderUrl;
       else window.location.href = renderUrl;
