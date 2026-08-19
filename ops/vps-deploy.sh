@@ -36,9 +36,9 @@ echo "DEPLOY_DIR=$APP_DIR"
 echo "DEPLOY_COMMIT=$APP_GIT_SHA"
 
 # O container usa nome fixo. Remover uma instância antiga evita conflito entre
-# projetos Compose diferentes; o volume nomeado carousel-projects é preservado.
+# projetos Compose diferentes; os volumes nomeados são preservados.
 if docker container inspect gerador-carrossel >/dev/null 2>&1; then
-  echo "Removendo container anterior gerador-carrossel (volume preservado)..."
+  echo "Removendo container anterior gerador-carrossel (volumes preservados)..."
   docker rm -f gerador-carrossel >/dev/null
 fi
 
@@ -102,10 +102,14 @@ async function jsonRequest(path, init = {}) {
   const health = await healthResponse.json();
   console.log(`HEALTH_HTTP=${healthResponse.status}`);
   console.log(`PERSISTENCE=${health.persistence || "unknown"}`);
+  console.log(`IMAGE_PERSISTENCE=${health.image_persistence || "unknown"}`);
   console.log(`BUILD_COMMIT=${health.build?.commit || "unknown"}`);
   if (!healthResponse.ok) throw new Error(`health HTTP ${healthResponse.status}`);
   if (health.persistence !== "local-volume") {
     throw new Error(`persistência inesperada: ${health.persistence || "unknown"}`);
+  }
+  if (health.image_persistence !== "local-volume") {
+    throw new Error(`persistência de imagens inesperada: ${health.image_persistence || "unknown"}`);
   }
   if (health.build?.commit !== process.env.APP_GIT_SHA) {
     throw new Error(`build commit inesperado: API=${health.build?.commit || "unknown"} deploy=${process.env.APP_GIT_SHA}`);
@@ -163,5 +167,6 @@ NODE
 
 echo "GERADOR_CARROSSEL_LOCAL=http://127.0.0.1:3007"
 echo "HERMES_PROJECTS=http://127.0.0.1:3007/api/hermes/projects"
+echo "HERMES_IMAGE_IMPORT=http://127.0.0.1:3007/api/hermes/images/import"
 echo "APP_GIT_SHA=$APP_GIT_SHA"
 echo "STATUS=OK"
