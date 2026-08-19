@@ -2,6 +2,24 @@
 
 import { useEffect, useRef, useState } from "react";
 
+type TextSize = "small" | "medium" | "large";
+type EditorState = {
+  version: 1;
+  projectId: string;
+  status: "rascunho" | "salvo" | "aprovado";
+  templateId: string;
+  cardIndex: number;
+  slotIndex: number;
+  images: Record<string, string>;
+  photoCfgs: Record<string, { x: number; y: number; zoom: number; fit: "cover" | "contain" }>;
+  copies: Record<string, { headline: string; body: string; cta: string }>;
+  textSizes: Record<string, TextSize>;
+  textMovesByCard: Record<string, unknown>;
+  colorsByCard: Record<string, unknown>;
+  typeStyles: Record<string, unknown>;
+  updatedAt: string;
+};
+
 type RemoteCard = {
   card: number;
   headline?: string;
@@ -9,6 +27,7 @@ type RemoteCard = {
   body?: string;
   cta?: string;
   photo_id?: string;
+  slot?: string;
   slot_index?: number;
   text_size?: string;
 };
@@ -17,37 +36,54 @@ type RemoteProject = {
   project_id: string;
   template: string;
   status?: string;
+  cta?: string;
+  caption?: string;
   cards?: RemoteCard[];
-  editor_state?: Record<string, unknown>;
-  [key: string]: unknown;
+  editor_state?: EditorState;
 };
 
 function cardKey(template: string, cardIndex: number) { return `${template}:${cardIndex}`; }
 function photoKey(template: string, cardIndex: number, slotIndex: number) { return `${template}:${cardIndex}:${slotIndex}`; }
-function normalizeSize(value?: string) {
+function normalizeSize(value?: string): TextSize {
   const v = (value || "medium").toLowerCase();
-  if (["small", "pequeno"].includes(v)) return "small";
-  if (["large", "grande"].includes(v)) return "large";
+  if (v === "small" || v === "pequeno") return "small";
+  if (v === "large" || v === "grande") return "large";
   return "medium";
 }
+function slotIndex(slot?: string, explicit?: number) {
+  if (Number.isInteger(explicit) && (explicit as number) >= 0) return explicit as number;
+  const s = (slot || "").toLowerCase();
+  if (/(_3|foto_3)$/.test(s)) return 2;
+  if (/(_2|foto_2|secundaria|detalhe|depois)$/.test(s)) return 1;
+  return 0;
+}
 
-function toEditorState(project: RemoteProject) {
-  if (project.editor_state && typeof project.editor_state === "object") return project.editor_state;
+function toEditorState(project: RemoteProject): EditorState {
+  if (project.editor_state?.projectId === project.project_id) return project.editor_state;
   const template = (project.template || "T01").toUpperCase();
-  const copies: Record<string, unknown> = {};
-  const textSizes: Record<string, string> = {};
-  const images: Record<string, string> = {};
-  for (const c of project.cards || []) {
+  const copies: EditorState["copies"] = {};
+  const textSizes: EditorState["textSizes"] = {};
+  const images: EditorState["images"] = {};
+  const photoCfgs: EditorState["photoCfgs"] = {};
+  const cards = [...(project.cards || [])].sort((a, b) => a.card - b.card);
+
+  for (const c of cards) {
     const index = Math.max(0, Number(c.card || 1) - 1);
-    const slot = Math.max(0, Number(c.slot_index ?? 0));
-    copies[cardKey(template, index)] = {
+    const slot = slotIndex(c.slot, c.slot_index);
+    const cKey = cardKey(template, index);
+    const pKey = photoKey(template, index, slot);
+    copies[cKey] = {
       headline: c.headline || c.text || "",
       body: c.body || "",
-      cta: c.cta || "",
+      cta: c.cta || (index === cards.length - 1 ? project.cta || "" : ""),
     };
-    textSizes[cardKey(template, index)] = normalizeSize(c.text_size);
-    if (c.photo_id) images[photoKey(template, index, slot)] = `/api/projects/images/${encodeURIComponent(c.photo_id)}`;
+    textSizes[cKey] = normalizeSize(c.text_size);
+    if (c.photo_id) {
+      images[pKey] = `/api/projects/images/${encodeURIComponent(c.photo_id)}`;
+      photoCfgs[pKey] = { x: 0, y: 0, zoom: 100, fit: "cover" };
+    }
   }
+
   return {
     version: 1,
     projectId: project.project_id,
@@ -56,7 +92,7 @@ function toEditorState(project: RemoteProject) {
     cardIndex: 0,
     slotIndex: 0,
     images,
-    photoCfgs: {},
+    photoCfgs,
     copies,
     textSizes,
     textMovesByCard: {},
@@ -72,8 +108,7 @@ export default function RemoteProjectBridge() {
   const lastRawRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const projectId = params.get("project");
+    const projectId = new URLSearchParams(window.location.search).get("project");
     if (!projectId) return;
     const storageKey = `mago-project:${projectId}`;
     let cancelled = false;
@@ -81,10 +116,9 @@ export default function RemoteProjectBridge() {
     async function push(raw: string) {
       const remote = remoteRef.current;
       if (!remote) return;
-      let editorState: Record<string, unknown>;
-      try { editorState = JSON.parse(raw) as Record<string, unknown>; } catch { return; }
-      const editorStatus = typeof editorState.status === "string" ? editorState.status : remote.status;
-      const payload: RemoteProject = { ...remote, editor_state: editorState, status: editorStatus };
+      let editorState: EditorState;
+      try { editorState = JSON.parse(raw) as EditorState; } catch { return; }
+      const payload: RemoteProject = { ...remote, editor_state: editorState, status: editorState.status };
       try {
         const response = await fetch(`/api/projects/${encodeURIComponent(projectId)}`, {
           method: "PUT",
@@ -92,7 +126,7 @@ export default function RemoteProjectBridge() {
           body: JSON.stringify(payload),
         });
         if (response.ok) remoteRef.current = payload;
-      } catch { /* o autosave local continua válido */ }
+      } catch { /* mantém o autosave local */ }
     }
 
     async function load() {
@@ -105,37 +139,44 @@ export default function RemoteProjectBridge() {
         }
         const remote = await response.json() as RemoteProject;
         remoteRef.current = remote;
-        const local = localStorage.getItem(storageKey);
-        if (!local) {
-          const initial = JSON.stringify(toEditorState(remote));
+        const initial = JSON.stringify(toEditorState(remote));
+        const localRaw = localStorage.getItem(storageKey);
+        let shouldReplace = !localRaw;
+
+        if (localRaw && !remote.editor_state) {
+          try {
+            const local = JSON.parse(localRaw) as EditorState;
+            shouldReplace = local.templateId !== remote.template.toUpperCase() || Object.keys(local.images || {}).length === 0;
+          } catch {
+            shouldReplace = true;
+          }
+        }
+        if (remote.editor_state) shouldReplace = true;
+
+        if (shouldReplace) {
           localStorage.setItem(storageKey, initial);
+          if (remote.caption) localStorage.setItem(`mago-project-caption:${projectId}`, remote.caption);
           lastRawRef.current = initial;
           if (!cancelled) window.location.reload();
           return;
         }
-        lastRawRef.current = local;
+
+        lastRawRef.current = localRaw;
         setMessage("Projeto conectado à VPS ✓");
       } catch {
         setMessage("Projeto local disponível; sincronização com VPS indisponível.");
       }
     }
 
-    load();
+    void load();
     const timer = window.setInterval(() => {
       if (!remoteRef.current) return;
       const raw = localStorage.getItem(storageKey);
-      if (raw === null) {
-        if (lastRawRef.current !== null) {
-          lastRawRef.current = null;
-          fetch(`/api/projects/${encodeURIComponent(projectId)}`, { method: "DELETE" }).catch(() => undefined);
-        }
-        return;
-      }
-      if (raw !== lastRawRef.current) {
+      if (raw && raw !== lastRawRef.current) {
         lastRawRef.current = raw;
-        push(raw);
+        void push(raw);
       }
-    }, 1000);
+    }, 1200);
 
     return () => {
       cancelled = true;
