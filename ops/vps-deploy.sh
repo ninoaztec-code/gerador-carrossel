@@ -4,7 +4,9 @@ set -euo pipefail
 REPO_URL="https://github.com/ninoaztec-code/gerador-carrossel.git"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-APP_DIR="${APP_DIR:-$SCRIPT_REPO_DIR}"
+# Deploy sempre o mesmo checkout onde este script está sendo executado.
+# Isso evita variáveis APP_DIR antigas apontando para outro clone da VPS.
+APP_DIR="$SCRIPT_REPO_DIR"
 
 if [ ! -d "$APP_DIR/.git" ]; then
   APP_DIR="/opt/gerador-carrossel"
