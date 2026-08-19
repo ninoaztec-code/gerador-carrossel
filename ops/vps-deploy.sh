@@ -20,6 +20,8 @@ else
   cd "$APP_DIR"
 fi
 
+export APP_GIT_SHA="$(git rev-parse HEAD)"
+
 if [ -f .env ]; then
   set -a
   # shellcheck disable=SC1091
@@ -40,4 +42,5 @@ node -e "fetch('http://127.0.0.1:3007/api/hermes/projects').then(async r=>{conso
 
 echo "GERADOR_CARROSSEL_LOCAL=http://127.0.0.1:3007"
 echo "HERMES_PROJECTS=http://127.0.0.1:3007/api/hermes/projects"
+echo "APP_GIT_SHA=$APP_GIT_SHA"
 echo "STATUS=OK"
