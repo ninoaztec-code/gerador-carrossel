@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as htmlToImage from "html-to-image";
 import { CarouselDocument, CarouselSlide, DEMO, FAMILIES, FamilyId, validateCarousel } from "@/lib/carousel";
 
@@ -33,14 +33,40 @@ export default function CarouselStudio() {
   const [idx,setIdx] = useState(0);
   const [topic,setTopic] = useState("");
   const [busy,setBusy] = useState(false);
+  const [projectStatus,setProjectStatus] = useState("");
   const ref=useRef<HTMLDivElement>(null);
   const errors=validateCarousel(doc);
+
+  useEffect(() => {
+    const project = new URLSearchParams(window.location.search).get("project");
+    if (!project) return;
+    let cancelled = false;
+    setProjectStatus(`Carregando ${project}...`);
+    fetch(`/api/hermes/projects?project_id=${encodeURIComponent(project)}`, { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        return data;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setDoc(data.document as CarouselDocument);
+        setIdx(0);
+        setProjectStatus(`Projeto ${project} carregado do Hermes.`);
+      })
+      .catch((error) => {
+        if (!cancelled) setProjectStatus(`Erro ao carregar ${project}: ${error instanceof Error ? error.message : String(error)}`);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
   const patch=(p:Partial<CarouselSlide>)=>setDoc(d=>({...d,slides:d.slides.map((s,i)=>i===idx?{...s,...p}:s)}));
   async function generate(){ setBusy(true); try{ const r=await fetch("/api/gerar",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({tema:topic,family:doc.family,slides:6})}); const j=await r.json(); if(!r.ok) throw new Error(j.error); setDoc(j); setIdx(0);}catch(e){alert(e instanceof Error?e.message:String(e))}finally{setBusy(false)} }
   async function exportOne(){ if(errors.length) return alert(errors.join("\n")); if(!ref.current)return; const data=await htmlToImage.toPng(ref.current,{pixelRatio:2}); const a=document.createElement("a");a.href=data;a.download=`${doc.id||"carousel"}-${String(idx+1).padStart(2,"0")}.png`;a.click(); }
   return <main style={{ minHeight:"100vh", background:"#151515", color:"#fff", padding:28, fontFamily:"Arial,sans-serif" }}>
     <div style={{ maxWidth:1220,margin:"auto",display:"grid",gridTemplateColumns:"340px 1fr",gap:28 }}>
       <aside style={{ background:"#202020",padding:22,borderRadius:18 }}><h1 style={{marginTop:0}}>Carousel Studio</h1><p style={{opacity:.65}}>Hermes → Gemini → JSON → render determinístico</p>
+        {projectStatus && <div style={{marginBottom:16,padding:10,borderRadius:10,background:"#2a2a2a",fontSize:12,lineHeight:1.4}}>{projectStatus}</div>}
         <label>Família visual</label><select value={doc.family} onChange={e=>setDoc(d=>({...d,family:e.target.value as FamilyId}))} style={{width:"100%",padding:12,margin:"8px 0 18px"}}>{Object.entries(FAMILIES).map(([id,x])=><option key={id} value={id}>{x.name}</option>)}</select>
         <label>Tema</label><textarea value={topic} onChange={e=>setTopic(e.target.value)} rows={4} style={{width:"100%",boxSizing:"border-box",padding:12,margin:"8px 0"}} placeholder="Ex.: corte curto para mulheres maduras"/><button disabled={busy||!topic.trim()} onClick={generate} style={{width:"100%",padding:13}}>{busy?"Gerando...":"Gerar com Gemini"}</button>
         <hr style={{borderColor:"#333",margin:"22px 0"}}/><label>Headline</label><textarea value={doc.slides[idx].headline} onChange={e=>patch({headline:e.target.value})} rows={4} style={{width:"100%",boxSizing:"border-box",padding:10,marginTop:8}}/><label>Texto</label><textarea value={doc.slides[idx].body||""} onChange={e=>patch({body:e.target.value})} rows={4} style={{width:"100%",boxSizing:"border-box",padding:10,marginTop:8}}/>
