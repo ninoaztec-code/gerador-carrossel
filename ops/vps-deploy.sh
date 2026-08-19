@@ -38,6 +38,13 @@ fi
 echo "DEPLOY_DIR=$APP_DIR"
 echo "DEPLOY_COMMIT=$APP_GIT_SHA"
 
+# O container usa nome fixo. Remover uma instância antiga evita conflito entre
+# projetos Compose diferentes; o volume nomeado carousel-projects é preservado.
+if docker container inspect gerador-carrossel >/dev/null 2>&1; then
+  echo "Removendo container anterior gerador-carrossel (volume preservado)..."
+  docker rm -f gerador-carrossel >/dev/null
+fi
+
 docker compose -f compose.vps.yml up -d --build
 
 docker compose -f compose.vps.yml ps
