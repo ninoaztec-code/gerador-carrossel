@@ -5,6 +5,10 @@ Requires OPENAI_API_KEY. Generates only missing files so it can be resumed safel
 The prompts come from /api/hermes/official-image-jobs, which is built from the
 approved content plan. Output defaults to:
 /root/hermes-workspace/conteudo-mago/producao-oficial/CM-XXX/NN.jpg
+
+Optional controls for a safe test run:
+  OFFICIAL_PROJECT_FILTER=CM-037
+  OFFICIAL_IMAGE_MAX_JOBS=1
 """
 import base64, json, os, sys, time, urllib.request, urllib.error
 from pathlib import Path
@@ -17,6 +21,8 @@ MODEL = os.environ.get("OPENAI_IMAGE_MODEL", "gpt-image-2")
 QUALITY = os.environ.get("OPENAI_IMAGE_QUALITY", "medium")
 SIZE = os.environ.get("OPENAI_IMAGE_SIZE", "1024x1536")
 DELAY = float(os.environ.get("OPENAI_IMAGE_DELAY", "1.0"))
+PROJECT_FILTER = os.environ.get("OFFICIAL_PROJECT_FILTER", "").strip().upper()
+MAX_JOBS = int(os.environ.get("OFFICIAL_IMAGE_MAX_JOBS", "0") or 0)
 
 if not OPENAI_KEY:
     print("OFFICIAL_IMAGE_GENERATION=BLOCKED")
@@ -31,10 +37,21 @@ with urllib.request.urlopen(req, timeout=60) as r:
     jobs_doc = json.loads(r.read().decode())
 assert jobs_doc.get("ok") is True, jobs_doc
 jobs = jobs_doc["jobs"]
+if PROJECT_FILTER:
+    jobs = [job for job in jobs if str(job.get("project_id", "")).upper() == PROJECT_FILTER]
+if MAX_JOBS > 0:
+    jobs = jobs[:MAX_JOBS]
+if not jobs:
+    print("OFFICIAL_IMAGE_GENERATION=BLOCKED")
+    print("REASON=no_jobs_after_filter")
+    sys.exit(2)
+
 print(f"OFFICIAL_IMAGE_JOBS={len(jobs)}")
 print(f"MODEL={MODEL}")
 print(f"QUALITY={QUALITY}")
 print(f"SIZE={SIZE}")
+if PROJECT_FILTER: print(f"PROJECT_FILTER={PROJECT_FILTER}")
+if MAX_JOBS > 0: print(f"MAX_JOBS={MAX_JOBS}")
 
 completed = 0
 skipped = 0
