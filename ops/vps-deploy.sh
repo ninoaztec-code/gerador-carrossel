@@ -32,11 +32,6 @@ fi
 
 export APP_GIT_SHA="$(git rev-parse HEAD)"
 
-if [ -z "${CAROUSEL_API_KEY:-}" ]; then
-  echo "ERRO: defina CAROUSEL_API_KEY no ambiente ou em $APP_DIR/.env"
-  exit 2
-fi
-
 echo "DEPLOY_DIR=$APP_DIR"
 echo "DEPLOY_COMMIT=$APP_GIT_SHA"
 
