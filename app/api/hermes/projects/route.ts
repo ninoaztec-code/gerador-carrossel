@@ -32,6 +32,16 @@ type HermesProject = {
   cards: HermesCard[];
 };
 
+type ImageDiagnostic = {
+  card: number;
+  had_photo_id: boolean;
+  source_field: "image_url" | "direct_image_url" | "none";
+  source_url?: string;
+  action: "imported" | "kept_photo_id" | "kept_local_url" | "no_image" | "import_failed" | "images_dir_missing";
+  photo_id?: string;
+  error?: string;
+};
+
 function authorized(req: NextRequest) {
   const secret = process.env.HERMES_API_KEY;
   if (!secret) return true;
@@ -55,9 +65,26 @@ function validate(project: HermesProject) {
     if (seen.has(card.card)) errors.push(`card_duplicado:${card.card}`);
     seen.add(card.card);
     if (!card.headline && !card.text && !card.body) warnings.push(`card_${card.card}_sem_texto`);
-    if (!card.photo_id && !card.image_url && !card.direct_image_url && !card.image_data_url) warnings.push(`card_${card.card}_sem_foto`);
   }
   return { errors, warnings };
+}
+
+function pickExternalImage(card: HermesCard) {
+  const imageUrl = String(card.image_url || "").trim();
+  if (/^https?:\/\//i.test(imageUrl)) return { field: "image_url" as const, url: imageUrl };
+  const directImageUrl = String(card.direct_image_url || "").trim();
+  if (/^https?:\/\//i.test(directImageUrl)) return { field: "direct_image_url" as const, url: directImageUrl };
+  return null;
+}
+
+function isLocalImageUrl(url: string, origin: string) {
+  try {
+    const parsed = new URL(url);
+    const local = new URL(origin);
+    return parsed.origin === local.origin && parsed.pathname.startsWith("/api/projects/images/");
+  } catch {
+    return false;
+  }
 }
 
 export async function GET(req: NextRequest) {
@@ -88,15 +115,27 @@ export async function POST(req: NextRequest) {
     const origin = carouselPublicOrigin(req);
     const warnings = [...validation.warnings];
     const importedPhotos: Array<{ card: number; photo_id: string; image_url: string; source_url: string }> = [];
+    const diagnostics: ImageDiagnostic[] = [];
     const sortedCards = [...project.cards].sort((a, b) => a.card - b.card);
     const cards: HermesCard[] = [];
 
     for (const card of sortedCards) {
       const next: HermesCard = { ...card };
-      const externalImage = !next.photo_id ? String(next.image_url || next.direct_image_url || "").trim() : "";
-      if (externalImage && /^https?:\/\//i.test(externalImage) && process.env.CAROUSEL_IMAGES_DIR) {
+      const candidate = pickExternalImage(next);
+      const hadPhotoId = Boolean(next.photo_id);
+
+      if (candidate && isLocalImageUrl(candidate.url, origin)) {
+        diagnostics.push({
+          card: next.card,
+          had_photo_id: hadPhotoId,
+          source_field: candidate.field,
+          source_url: candidate.url,
+          action: "kept_local_url",
+          photo_id: next.photo_id,
+        });
+      } else if (candidate && process.env.CAROUSEL_IMAGES_DIR) {
         try {
-          const imported = await importExternalImage(externalImage);
+          const imported = await importExternalImage(candidate.url);
           const localUrl = `${origin}/api/projects/images/${encodeURIComponent(imported.photo_id)}`;
           next.photo_id = imported.photo_id;
           next.image_url = localUrl;
@@ -107,11 +146,55 @@ export async function POST(req: NextRequest) {
             image_url: localUrl,
             source_url: imported.source_url,
           });
+          diagnostics.push({
+            card: next.card,
+            had_photo_id: hadPhotoId,
+            source_field: candidate.field,
+            source_url: candidate.url,
+            action: "imported",
+            photo_id: imported.photo_id,
+          });
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error);
           warnings.push(`card_${next.card}_importacao_foto_falhou:${reason}`);
+          diagnostics.push({
+            card: next.card,
+            had_photo_id: hadPhotoId,
+            source_field: candidate.field,
+            source_url: candidate.url,
+            action: "import_failed",
+            photo_id: next.photo_id,
+            error: reason,
+          });
         }
+      } else if (candidate) {
+        warnings.push(`card_${next.card}_importacao_foto_falhou:CAROUSEL_IMAGES_DIR_missing`);
+        diagnostics.push({
+          card: next.card,
+          had_photo_id: hadPhotoId,
+          source_field: candidate.field,
+          source_url: candidate.url,
+          action: "images_dir_missing",
+          photo_id: next.photo_id,
+        });
+      } else if (next.photo_id) {
+        diagnostics.push({
+          card: next.card,
+          had_photo_id: true,
+          source_field: "none",
+          action: "kept_photo_id",
+          photo_id: next.photo_id,
+        });
+      } else {
+        warnings.push(`card_${next.card}_sem_foto`);
+        diagnostics.push({
+          card: next.card,
+          had_photo_id: false,
+          source_field: "none",
+          action: "no_image",
+        });
       }
+
       cards.push(next);
     }
 
@@ -144,6 +227,8 @@ export async function POST(req: NextRequest) {
       height: 1350,
     }));
 
+    const linkedPhotos = normalized.cards.filter((card) => Boolean(card.photo_id || card.image_url || card.direct_image_url || card.image_data_url)).length;
+
     return NextResponse.json({
       ok: true,
       project_id: normalized.project_id,
@@ -153,6 +238,9 @@ export async function POST(req: NextRequest) {
       render_html_url: renderProjectUrl,
       render_cards: renderCards,
       imported_photos: importedPhotos,
+      imported_photos_count: importedPhotos.length,
+      linked_photos_count: linkedPhotos,
+      image_diagnostics: diagnostics,
       warnings,
       persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
       image_persistence: process.env.CAROUSEL_IMAGES_DIR ? "local-volume" : "external-or-legacy",
