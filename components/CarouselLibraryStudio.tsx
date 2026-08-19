@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import CarouselLibraryStudioV2 from "@/components/CarouselLibraryStudioV2";
 import { INSTAGRAM_45PLUS_LIBRARY } from "@/lib/instagramTemplateLibrary";
 import { cardKey, type ProjectState, type TextSize } from "@/lib/carouselProjectState";
@@ -79,6 +80,24 @@ export default function CarouselLibraryStudio() {
 
   return <>
     <CarouselLibraryStudioV2 />
+    <Link
+      href="/pautas"
+      style={{
+        position: "fixed",
+        left: 24,
+        bottom: 24,
+        zIndex: 1000,
+        borderRadius: 999,
+        padding: "13px 18px",
+        background: "#25201E",
+        color: "#fff",
+        fontWeight: 900,
+        boxShadow: "0 12px 30px rgba(0,0,0,.28)",
+        textDecoration: "none",
+      }}
+    >
+      📚 30 pautas
+    </Link>
     <button
       type="button"
       onClick={() => void approveAndOpenRender()}
