@@ -176,7 +176,7 @@ export async function deleteRemoteProject(projectId: string) {
 export async function getRemoteImage(photoId: string) {
   const local = await readLocalImage(photoId);
   if (local) {
-    return new Response(local.body, {
+    return new Response(new Uint8Array(local.body), {
       status: 200,
       headers: {
         "content-type": local.meta.content_type,
