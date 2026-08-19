@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { carouselPublicOrigin } from "@/lib/carouselPublicOrigin";
 import { importExternalImage } from "@/lib/localCarouselImages";
-import { createRemoteProject, putRemoteProject } from "@/lib/remoteCarouselProjects";
+import { createRemoteProject, getRemoteImage, putRemoteProject } from "@/lib/remoteCarouselProjects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ type ImageDiagnostic = {
   had_photo_id: boolean;
   source_field: "image_url" | "direct_image_url" | "none";
   source_url?: string;
-  action: "imported" | "kept_photo_id" | "kept_local_url" | "no_image" | "import_failed" | "images_dir_missing";
+  action: "imported" | "kept_photo_id" | "kept_local_url" | "no_image" | "import_failed" | "images_dir_missing" | "photo_id_unavailable";
   photo_id?: string;
   error?: string;
 };
@@ -87,6 +87,15 @@ function isLocalImageUrl(url: string, origin: string) {
   }
 }
 
+async function photoIdExists(photoId: string) {
+  try {
+    const response = await getRemoteImage(photoId);
+    return response.ok && String(response.headers.get("content-type") || "").toLowerCase().startsWith("image/");
+  } catch {
+    return false;
+  }
+}
+
 export async function GET(req: NextRequest) {
   const origin = carouselPublicOrigin(req);
   return NextResponse.json({
@@ -125,14 +134,31 @@ export async function POST(req: NextRequest) {
       const hadPhotoId = Boolean(next.photo_id);
 
       if (candidate && isLocalImageUrl(candidate.url, origin)) {
-        diagnostics.push({
-          card: next.card,
-          had_photo_id: hadPhotoId,
-          source_field: candidate.field,
-          source_url: candidate.url,
-          action: "kept_local_url",
-          photo_id: next.photo_id,
-        });
+        const localPhotoId = next.photo_id || decodeURIComponent(candidate.url.split("/").pop() || "");
+        if (localPhotoId && await photoIdExists(localPhotoId)) {
+          next.photo_id = localPhotoId;
+          diagnostics.push({
+            card: next.card,
+            had_photo_id: hadPhotoId,
+            source_field: candidate.field,
+            source_url: candidate.url,
+            action: "kept_local_url",
+            photo_id: localPhotoId,
+          });
+        } else {
+          warnings.push(`card_${next.card}_photo_id_indisponivel:${localPhotoId || "unknown"}`);
+          next.photo_id = undefined;
+          next.image_url = undefined;
+          next.direct_image_url = undefined;
+          diagnostics.push({
+            card: next.card,
+            had_photo_id: hadPhotoId,
+            source_field: candidate.field,
+            source_url: candidate.url,
+            action: "photo_id_unavailable",
+            photo_id: localPhotoId || undefined,
+          });
+        }
       } else if (candidate && process.env.CAROUSEL_IMAGES_DIR) {
         try {
           const imported = await importExternalImage(candidate.url);
@@ -178,13 +204,26 @@ export async function POST(req: NextRequest) {
           photo_id: next.photo_id,
         });
       } else if (next.photo_id) {
-        diagnostics.push({
-          card: next.card,
-          had_photo_id: true,
-          source_field: "none",
-          action: "kept_photo_id",
-          photo_id: next.photo_id,
-        });
+        const existingPhotoId = next.photo_id;
+        if (await photoIdExists(existingPhotoId)) {
+          diagnostics.push({
+            card: next.card,
+            had_photo_id: true,
+            source_field: "none",
+            action: "kept_photo_id",
+            photo_id: existingPhotoId,
+          });
+        } else {
+          warnings.push(`card_${next.card}_photo_id_indisponivel:${existingPhotoId}`);
+          next.photo_id = undefined;
+          diagnostics.push({
+            card: next.card,
+            had_photo_id: true,
+            source_field: "none",
+            action: "photo_id_unavailable",
+            photo_id: existingPhotoId,
+          });
+        }
       } else {
         warnings.push(`card_${next.card}_sem_foto`);
         diagnostics.push({
@@ -228,6 +267,7 @@ export async function POST(req: NextRequest) {
     }));
 
     const linkedPhotos = normalized.cards.filter((card) => Boolean(card.photo_id || card.image_url || card.direct_image_url || card.image_data_url)).length;
+    const needsImages = warnings.some((warning) => /_sem_foto$|_photo_id_indisponivel:|_importacao_foto_falhou:/.test(warning));
 
     return NextResponse.json({
       ok: true,
@@ -244,7 +284,7 @@ export async function POST(req: NextRequest) {
       warnings,
       persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
       image_persistence: process.env.CAROUSEL_IMAGES_DIR ? "local-volume" : "external-or-legacy",
-      status: "ready_for_review",
+      status: needsImages ? "needs_images" : "ready_for_review",
       build: { commit: buildCommit() },
     });
   } catch (error) {
