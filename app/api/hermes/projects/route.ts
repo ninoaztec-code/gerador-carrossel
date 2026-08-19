@@ -35,9 +35,9 @@ type HermesProject = {
 type ImageDiagnostic = {
   card: number;
   had_photo_id: boolean;
-  source_field: "image_url" | "direct_image_url" | "none";
+  source_field: "image_url" | "direct_image_url" | "image_data_url" | "none";
   source_url?: string;
-  action: "imported" | "kept_photo_id" | "kept_local_url" | "no_image" | "import_failed" | "images_dir_missing" | "photo_id_unavailable";
+  action: "imported" | "kept_photo_id" | "kept_local_url" | "kept_data_url" | "no_image" | "import_failed" | "images_dir_missing" | "photo_id_unavailable";
   photo_id?: string;
   error?: string;
 };
@@ -50,6 +50,11 @@ function authorized(req: NextRequest) {
 
 function buildCommit() {
   return process.env.APP_GIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null;
+}
+
+function validImageDataUrl(value?: string) {
+  const raw = String(value || "").trim();
+  return /^data:image\/(?:jpeg|jpg|png|webp|gif|avif);base64,[a-z0-9+/=\s]+$/i.test(raw) ? raw : "";
 }
 
 function validate(project: HermesProject) {
@@ -65,6 +70,7 @@ function validate(project: HermesProject) {
     if (seen.has(card.card)) errors.push(`card_duplicado:${card.card}`);
     seen.add(card.card);
     if (!card.headline && !card.text && !card.body) warnings.push(`card_${card.card}_sem_texto`);
+    if (card.image_data_url && !validImageDataUrl(card.image_data_url)) warnings.push(`card_${card.card}_image_data_url_invalida`);
   }
   return { errors, warnings };
 }
@@ -103,13 +109,14 @@ export async function GET(req: NextRequest) {
     service: "hermes-studio-project-bridge",
     endpoint: "/api/hermes/projects",
     method: "POST",
-    purpose: "Salva o projeto, importa imagens externas e devolve links do Studio e do render.",
+    purpose: "Salva o projeto, aceita imagens embutidas, importa imagens externas e devolve links do Studio e do render.",
     persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
     image_persistence: process.env.CAROUSEL_IMAGES_DIR ? "local-volume" : "external-or-legacy",
     image_import_endpoint: `${origin}/api/hermes/images/import`,
     studio_origin: origin,
     studio_example: `${origin}/studio?project=PROJECT_ID`,
     render_endpoint: `${origin}/api/hermes/render-project?project_id=PROJECT_ID`,
+    embedded_image_field: "image_data_url",
     build: { commit: buildCommit() },
   });
 }
@@ -130,10 +137,22 @@ export async function POST(req: NextRequest) {
 
     for (const card of sortedCards) {
       const next: HermesCard = { ...card };
+      const embeddedImage = validImageDataUrl(next.image_data_url);
       const candidate = pickExternalImage(next);
       const hadPhotoId = Boolean(next.photo_id);
 
-      if (candidate && isLocalImageUrl(candidate.url, origin)) {
+      if (embeddedImage) {
+        next.image_data_url = embeddedImage;
+        next.photo_id = undefined;
+        next.image_url = undefined;
+        next.direct_image_url = undefined;
+        diagnostics.push({
+          card: next.card,
+          had_photo_id: hadPhotoId,
+          source_field: "image_data_url",
+          action: "kept_data_url",
+        });
+      } else if (candidate && isLocalImageUrl(candidate.url, origin)) {
         const localPhotoId = next.photo_id || decodeURIComponent(candidate.url.split("/").pop() || "");
         if (localPhotoId && await photoIdExists(localPhotoId)) {
           next.photo_id = localPhotoId;
@@ -266,8 +285,8 @@ export async function POST(req: NextRequest) {
       height: 1350,
     }));
 
-    const linkedPhotos = normalized.cards.filter((card) => Boolean(card.photo_id || card.image_url || card.direct_image_url || card.image_data_url)).length;
-    const needsImages = warnings.some((warning) => /_sem_foto$|_photo_id_indisponivel:|_importacao_foto_falhou:/.test(warning));
+    const linkedPhotos = normalized.cards.filter((card) => Boolean(validImageDataUrl(card.image_data_url) || card.photo_id || card.image_url || card.direct_image_url)).length;
+    const needsImages = warnings.some((warning) => /_sem_foto$|_photo_id_indisponivel:|_importacao_foto_falhou:|_image_data_url_invalida$/.test(warning));
 
     return NextResponse.json({
       ok: true,
@@ -280,6 +299,7 @@ export async function POST(req: NextRequest) {
       imported_photos: importedPhotos,
       imported_photos_count: importedPhotos.length,
       linked_photos_count: linkedPhotos,
+      embedded_photos_count: normalized.cards.filter((card) => Boolean(validImageDataUrl(card.image_data_url))).length,
       image_diagnostics: diagnostics,
       warnings,
       persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
