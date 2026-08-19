@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { carouselPublicOrigin } from "@/lib/carouselPublicOrigin";
+import { importExternalImage } from "@/lib/localCarouselImages";
 import { createRemoteProject, putRemoteProject } from "@/lib/remoteCarouselProjects";
 
 export const runtime = "nodejs";
@@ -66,8 +67,10 @@ export async function GET(req: NextRequest) {
     service: "hermes-studio-project-bridge",
     endpoint: "/api/hermes/projects",
     method: "POST",
-    purpose: "Salva o projeto e devolve links do Studio e do render.",
+    purpose: "Salva o projeto, importa imagens externas e devolve links do Studio e do render.",
     persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
+    image_persistence: process.env.CAROUSEL_IMAGES_DIR ? "local-volume" : "external-or-legacy",
+    image_import_endpoint: `${origin}/api/hermes/images/import`,
     studio_origin: origin,
     studio_example: `${origin}/studio?project=PROJECT_ID`,
     render_endpoint: `${origin}/api/hermes/render-project?project_id=PROJECT_ID`,
@@ -79,13 +82,43 @@ export async function POST(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   try {
     const project = (await req.json()) as HermesProject;
-    const { errors, warnings } = validate(project);
-    if (errors.length) return NextResponse.json({ ok: false, errors, warnings }, { status: 422 });
+    const validation = validate(project);
+    if (validation.errors.length) return NextResponse.json({ ok: false, errors: validation.errors, warnings: validation.warnings }, { status: 422 });
+
+    const origin = carouselPublicOrigin(req);
+    const warnings = [...validation.warnings];
+    const importedPhotos: Array<{ card: number; photo_id: string; image_url: string; source_url: string }> = [];
+    const sortedCards = [...project.cards].sort((a, b) => a.card - b.card);
+    const cards: HermesCard[] = [];
+
+    for (const card of sortedCards) {
+      const next: HermesCard = { ...card };
+      const externalImage = !next.photo_id ? String(next.image_url || next.direct_image_url || "").trim() : "";
+      if (externalImage && /^https?:\/\//i.test(externalImage) && process.env.CAROUSEL_IMAGES_DIR) {
+        try {
+          const imported = await importExternalImage(externalImage);
+          const localUrl = `${origin}/api/projects/images/${encodeURIComponent(imported.photo_id)}`;
+          next.photo_id = imported.photo_id;
+          next.image_url = localUrl;
+          next.direct_image_url = undefined;
+          importedPhotos.push({
+            card: next.card,
+            photo_id: imported.photo_id,
+            image_url: localUrl,
+            source_url: imported.source_url,
+          });
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          warnings.push(`card_${next.card}_importacao_foto_falhou:${reason}`);
+        }
+      }
+      cards.push(next);
+    }
 
     const normalized: HermesProject = {
       ...project,
       template: project.template.toUpperCase(),
-      cards: [...project.cards].sort((a, b) => a.card - b.card),
+      cards,
     };
 
     let result = await createRemoteProject(normalized);
@@ -101,7 +134,6 @@ export async function POST(req: NextRequest) {
       }, { status: 502 });
     }
 
-    const origin = carouselPublicOrigin(req);
     const encodedId = encodeURIComponent(normalized.project_id);
     const studioUrl = `${origin}/studio?project=${encodedId}`;
     const renderProjectUrl = `${origin}/api/hermes/render-project?project_id=${encodedId}`;
@@ -120,8 +152,10 @@ export async function POST(req: NextRequest) {
       review_url: studioUrl,
       render_html_url: renderProjectUrl,
       render_cards: renderCards,
+      imported_photos: importedPhotos,
       warnings,
       persistence: process.env.CAROUSEL_PROJECTS_DIR ? "local-volume" : "remote-api",
+      image_persistence: process.env.CAROUSEL_IMAGES_DIR ? "local-volume" : "external-or-legacy",
       status: "ready_for_review",
       build: { commit: buildCommit() },
     });
