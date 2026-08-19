@@ -7,6 +7,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
+      APP_GIT_SHA: ${APP_GIT_SHA:-unknown}
       HERMES_API_KEY: ${HERMES_API_KEY:-}
       CAROUSEL_API_KEY: ${CAROUSEL_API_KEY:?CAROUSEL_API_KEY obrigatoria}
       CAROUSEL_API_BASE: ${CAROUSEL_API_BASE:-https://carrossel.magodastesouras.com.br}
