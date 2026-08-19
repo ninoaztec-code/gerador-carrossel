@@ -89,11 +89,18 @@ function photoIdOf(card: RemoteCard) {
   return LEGACY_IMAGE_ID_BY_BASENAME[basename] || "";
 }
 
-function publicImageOf(card: RemoteCard) {
+function embeddedImageUrl(projectId: string, cardNumber: number) {
+  return `/api/hermes/project-image?project_id=${encodeURIComponent(projectId)}&card=${cardNumber}`;
+}
+
+function publicImageOf(card: RemoteCard, projectId: string) {
   const photoId = photoIdOf(card);
   if (photoId) return `/api/projects/images/${encodeURIComponent(photoId)}`;
-  const source = String(card.image_url || card.direct_image_url || card.image_data_url || "");
-  return /^(https?:|data:image)/i.test(source) ? source : "";
+  if (/^data:image/i.test(String(card.image_data_url || ""))) {
+    return embeddedImageUrl(projectId, Math.max(1, Number(card.card || 1)));
+  }
+  const source = String(card.image_url || card.direct_image_url || "");
+  return /^https?:/i.test(source) ? source : "";
 }
 
 function editorStateIsUsable(project: RemoteProject) {
@@ -106,8 +113,34 @@ function editorStateIsUsable(project: RemoteProject) {
   return savedCopies >= cardIndexes.size;
 }
 
+function compactEditorState(project: RemoteProject, state: ProjectState): ProjectState {
+  const embeddedByValue = new Map<string, number>();
+  for (const card of project.cards || []) {
+    const value = String(card.image_data_url || "");
+    if (/^data:image/i.test(value)) embeddedByValue.set(value, Math.max(1, Number(card.card || 1)));
+  }
+
+  const images: Record<string, string> = {};
+  for (const [key, value] of Object.entries(state.images || {})) {
+    if (!/^data:image/i.test(value)) {
+      images[key] = value;
+      continue;
+    }
+    const matchedCard = embeddedByValue.get(value);
+    if (matchedCard) {
+      images[key] = embeddedImageUrl(project.project_id, matchedCard);
+      continue;
+    }
+    const parts = key.split(":");
+    const inferredCard = Number(parts[1]);
+    images[key] = embeddedImageUrl(project.project_id, Number.isInteger(inferredCard) ? inferredCard + 1 : 1);
+  }
+
+  return { ...state, images };
+}
+
 function buildState(project: RemoteProject): ProjectState {
-  if (editorStateIsUsable(project)) return project.editor_state as ProjectState;
+  if (editorStateIsUsable(project)) return compactEditorState(project, project.editor_state as ProjectState);
 
   const template = project.template.toUpperCase();
   const images: ProjectState["images"] = {};
@@ -126,7 +159,7 @@ function buildState(project: RemoteProject): ProjectState {
       cta: card.cta || card.texto?.cta || (position === cards.length - 1 ? String(project.cta || project.cta_final || "") : ""),
     };
     textSizes[cKey] = sizeOf(card.text_size);
-    const image = publicImageOf(card);
+    const image = publicImageOf(card, project.project_id);
     if (image) {
       images[pKey] = image;
       photoCfgs[pKey] = { x: 0, y: 0, zoom: 100, fit: "cover" };
@@ -212,11 +245,12 @@ export default function StudioEntryV2() {
           }
           const state = buildState(payload);
           const key = `mago-project:${payload.project_id}`;
-          localStorage.setItem(key, JSON.stringify(state));
+          const serialized = JSON.stringify(state);
+          localStorage.setItem(key, serialized);
           rememberProject(payload.project_id);
           if (payload.caption) localStorage.setItem(`mago-project-caption:${payload.project_id}`, payload.caption);
           remoteRef.current = { ...payload, template: state.templateId, editor_state: state };
-          lastRawRef.current = JSON.stringify(state);
+          lastRawRef.current = serialized;
           startSync(payload.project_id);
           const target = new URL(window.location.href);
           target.hash = "";
@@ -260,6 +294,7 @@ export default function StudioEntryV2() {
         remoteRef.current = remote;
         const state = buildState(remote);
         const serialized = JSON.stringify(state);
+        localStorage.removeItem(key);
         localStorage.setItem(key, serialized);
         rememberProject(projectId);
         const caption = String(remote.caption || remote.legenda || "");
