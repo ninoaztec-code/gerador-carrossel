@@ -60,8 +60,9 @@ export async function GET(req: NextRequest) {
     service: "hermes-studio-project-bridge",
     endpoint: "/api/hermes/projects",
     method: "POST",
-    purpose: "Salva o projeto na VPS e devolve um link curto do Studio.",
+    purpose: "Salva o projeto na VPS e devolve links do Studio e do render.",
     studio_origin: req.nextUrl.origin,
+    render_endpoint: `${req.nextUrl.origin}/api/hermes/render-project?project_id=PROJECT_ID`,
   });
 }
 
@@ -84,14 +85,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "vps_project_save_failed", remote_status: result.status, remote: result.data }, { status: 502 });
     }
 
-    const studioUrl = `${req.nextUrl.origin}/studio?project=${encodeURIComponent(normalized.project_id)}`;
+    const encodedId = encodeURIComponent(normalized.project_id);
+    const studioUrl = `${req.nextUrl.origin}/studio?project=${encodedId}`;
+    const renderHtmlUrl = `${req.nextUrl.origin}/api/hermes/render-project?project_id=${encodedId}`;
+    const renderCards = normalized.cards.map((card) => ({
+      card: card.card,
+      html_url: `${renderHtmlUrl}&card=${card.card}`,
+      width: 1080,
+      height: 1350,
+    }));
+
     return NextResponse.json({
       ok: true,
       project_id: normalized.project_id,
       template: normalized.template,
       studio_url: studioUrl,
+      render_html_url: renderHtmlUrl,
+      render_cards: renderCards,
       warnings,
-      status: "ready_to_edit",
+      status: "ready_to_render",
     });
   } catch (error) {
     return NextResponse.json({ ok: false, error: String(error) }, { status: 500 });
