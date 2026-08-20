@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRemoteProject } from "@/lib/remoteCarouselProjects";
+import { getRemoteImage, getRemoteProject } from "@/lib/remoteCarouselProjects";
 import { INSTAGRAM_45PLUS_LIBRARY, LIBRARY_COLORS } from "@/lib/instagramTemplateLibrary";
 import type { Box, LibraryCard } from "@/lib/instagramTemplateLibrary";
 import { cardKey, photoKey } from "@/lib/carouselProjectState";
@@ -98,9 +98,9 @@ function buildFallbackState(project: RemoteProject, origin: string): ProjectStat
     };
     textSizes[cardKey(templateId, index)] = sizeOf(card.text_size);
     const slot = Number.isInteger(card.slot_index) && Number(card.slot_index) >= 0 ? Number(card.slot_index) : 0;
-    const source = card.photo_id
+    const source = card.image_data_url || (card.photo_id
       ? `${origin}/api/projects/images/${encodeURIComponent(String(card.photo_id).toUpperCase())}`
-      : String(card.image_url || card.direct_image_url || card.image_data_url || "");
+      : String(card.image_url || card.direct_image_url || ""));
     if (source) images[photoKey(templateId, index, slot)] = source;
   });
 
@@ -156,7 +156,27 @@ function absoluteImage(src: string, origin: string) {
   return new URL(src.startsWith("/") ? src : `/${src}`, origin).toString();
 }
 
-function renderCard(templateId: string, card: LibraryCard, cardIndex: number, totalCards: number, state: ProjectState, origin: string) {
+async function materializeImage(src: string, origin: string) {
+  const absolute = absoluteImage(src, origin);
+  if (!absolute || /^data:image/i.test(absolute)) return absolute;
+  try {
+    const url = new URL(absolute);
+    const match = url.pathname.match(/^\/api\/projects\/images\/([^/]+)$/i);
+    if (!match) return absolute;
+    const photoId = decodeURIComponent(match[1]);
+    const response = await getRemoteImage(photoId);
+    if (!response.ok) return absolute;
+    const contentType = String(response.headers.get("content-type") || "").split(";", 1)[0].trim().toLowerCase();
+    if (!contentType.startsWith("image/")) return absolute;
+    const bytes = Buffer.from(await response.arrayBuffer());
+    if (!bytes.length) return absolute;
+    return `data:${contentType};base64,${bytes.toString("base64")}`;
+  } catch {
+    return absolute;
+  }
+}
+
+async function renderCard(templateId: string, card: LibraryCard, cardIndex: number, totalCards: number, state: ProjectState, origin: string) {
   const main = card.headline ?? card.text ?? card.cta ?? { x: 7, y: 18, w: 40 };
   const key = cardKey(templateId, cardIndex);
   const copy = state.copies?.[key] ?? { headline: "", body: "", cta: "" };
@@ -168,15 +188,15 @@ function renderCard(templateId: string, card: LibraryCard, cardIndex: number, to
   const typeStyle = state.typeStyles?.[key] ?? "clean-serif";
   const type = TYPE_PRESETS[typeStyle];
 
-  const photos = card.photos.map((box, slotIndex) => {
+  const photos = (await Promise.all(card.photos.map(async (box, slotIndex) => {
     const pKey = photoKey(templateId, cardIndex, slotIndex);
-    const image = absoluteImage(state.images?.[pKey] || "", origin);
+    const image = await materializeImage(state.images?.[pKey] || "", origin);
     const cfg = state.photoCfgs?.[pKey] ?? DEFAULT_PHOTO;
     const content = image
       ? `<img src="${esc(image)}" alt="" style="width:100%;height:100%;object-fit:${cfg.fit};transform:translate(${cfg.x * 2}px,${cfg.y * 2}px) scale(${cfg.zoom / 100});transform-origin:center center;display:block"/>`
       : `<div class="placeholder">COLOQUE SUA FOTO AQUI</div>`;
     return `<div class="photo-slot" style="left:${box.x}%;top:${box.y}%;width:${box.w}%;height:${box.h}%;border-radius:${esc(radiusOf(box))};clip-path:${esc(clipPathOf(box))}">${content}</div>`;
-  }).join("");
+  }))).join("");
 
   const transform = (name: "headline" | "body" | "cta") => `translate(${moves[name].x * 2}px,${moves[name].y * 2}px)`;
   return `<section id="card-${cardIndex + 1}" class="card" data-template="${esc(templateId)}" data-card="${cardIndex + 1}" style="background:${esc(bg)};color:${esc(text)}">
@@ -219,7 +239,7 @@ export async function GET(req: NextRequest) {
     const indexes = cardParam !== null
       ? [requestedCard - 1]
       : Array.from({ length: totalCards }, (_, index) => index);
-    const cards = indexes.map((index) => renderCard(template.id, template.cards[index], index, totalCards, state, req.nextUrl.origin)).join("\n");
+    const cards = (await Promise.all(indexes.map((index) => renderCard(template.id, template.cards[index], index, totalCards, state, req.nextUrl.origin)))).join("\n");
     const html = `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${esc(projectId)} · render</title><style>
 *{box-sizing:border-box}html,body{margin:0;padding:0;background:#111}body{font-family:Arial,sans-serif}.deck{display:grid;gap:40px;padding:40px;width:max-content}.card{position:relative;width:1080px;height:1350px;overflow:hidden}.brand{position:absolute;left:60px;top:52px;z-index:5;font-size:18px;font-weight:800;letter-spacing:.16em;line-height:1.35}.brand span{font-weight:500}.photo-slot{position:absolute;overflow:hidden;border:2px dashed #A77C69;background:#E9DED4;color:#755547;z-index:2}.placeholder{width:100%;height:100%;display:grid;place-items:center;padding:24px;text-align:center;font-size:20px;font-weight:800}.copy{position:absolute;z-index:3}.headline{font-weight:700;line-height:1.08}.body{margin-top:36px;line-height:1.5}.cta{margin-top:40px;font-weight:800;line-height:1.25}@media print{body{background:#fff}.deck{gap:0;padding:0}.card{page-break-after:always}}
 </style></head><body><main class="deck">${cards}</main></body></html>`;
