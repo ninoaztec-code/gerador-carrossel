@@ -6,6 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ROOT = process.env.VISUAL_AUDIT_DIR || "/data/visual-audit";
+const PUBLIC_ORIGIN = (process.env.CAROUSEL_PUBLIC_ORIGIN || "https://carrossel.magodastesouras.com.br").replace(/\/$/, "");
 
 function safeProject(value: string | null) {
   const raw = String(value || "").toUpperCase();
@@ -17,7 +18,7 @@ function safeCard(value: string | null) {
   return Number.isInteger(n) && n >= 1 && n <= 10 ? n : 0;
 }
 
-async function buildIndex(origin: string) {
+async function buildIndex() {
   const projects: Array<{ project: string; cards: Array<{ card: number; url: string }> }> = [];
   for (let n = 37; n <= 66; n++) {
     const project = `CM-${String(n).padStart(3, "0")}`;
@@ -28,7 +29,7 @@ async function buildIndex(origin: string) {
         await fs.access(file);
         cards.push({
           card,
-          url: `${origin}/api/hermes/visual-audit?project=${encodeURIComponent(project)}&card=${card}`,
+          url: `${PUBLIC_ORIGIN}/api/hermes/visual-audit?project=${encodeURIComponent(project)}&card=${card}`,
         });
       } catch {
         // no screenshot for this card
@@ -46,8 +47,7 @@ export async function GET(req: NextRequest) {
   const card = safeCard(url.searchParams.get("card"));
 
   if (!project && !card) {
-    const origin = url.origin;
-    return NextResponse.json(await buildIndex(origin), {
+    return NextResponse.json(await buildIndex(), {
       status: 200,
       headers: { "cache-control": "no-store" },
     });
