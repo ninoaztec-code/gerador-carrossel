@@ -17,10 +17,41 @@ function safeCard(value: string | null) {
   return Number.isInteger(n) && n >= 1 && n <= 10 ? n : 0;
 }
 
+async function buildIndex(origin: string) {
+  const projects: Array<{ project: string; cards: Array<{ card: number; url: string }> }> = [];
+  for (let n = 37; n <= 66; n++) {
+    const project = `CM-${String(n).padStart(3, "0")}`;
+    const cards: Array<{ card: number; url: string }> = [];
+    for (let card = 1; card <= 10; card++) {
+      const file = path.join(ROOT, project, `card-${String(card).padStart(2, "0")}.png`);
+      try {
+        await fs.access(file);
+        cards.push({
+          card,
+          url: `${origin}/api/hermes/visual-audit?project=${encodeURIComponent(project)}&card=${card}`,
+        });
+      } catch {
+        // no screenshot for this card
+      }
+    }
+    if (cards.length) projects.push({ project, cards });
+  }
+  const total = projects.reduce((sum, p) => sum + p.cards.length, 0);
+  return { ok: true, projects_count: projects.length, screenshots_count: total, projects };
+}
+
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const project = safeProject(url.searchParams.get("project"));
   const card = safeCard(url.searchParams.get("card"));
+
+  if (!project && !card) {
+    const origin = url.origin;
+    return NextResponse.json(await buildIndex(origin), {
+      status: 200,
+      headers: { "cache-control": "no-store" },
+    });
+  }
 
   if (!project || !card) {
     return NextResponse.json({ ok: false, error: "project_and_card_required" }, { status: 400 });
