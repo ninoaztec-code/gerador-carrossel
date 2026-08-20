@@ -9,94 +9,95 @@ export const LIBRARY_COLORS={off_white:'#F7F2EC',bege:'#E7D8CB',terracota:'#9253
 const P='COLOQUE SUA FOTO AQUI';
 const b=(x:number,y:number,w:number,h:number,radius?:string,shape?:string):Box=>({x,y,w,h,radius,label:P,shape});
 const t=(x:number,y:number,w:number,kind?:string):TextBox=>({x,y,w,kind});
-const p=(photoWeight:DesignProfile['photoWeight'],rhythm:string,headlineMaxLines:number,bodyMaxLines:number,preferredType:DesignProfile['preferredType'],notes:string[]):DesignProfile=>({photoWeight,rhythm,headlineMaxLines,bodyMaxLines,safeMargin:7,preferredType,notes});
+const p=(photoWeight:DesignProfile['photoWeight'],rhythm:string,headlineMaxLines:number,bodyMaxLines:number,preferredType:DesignProfile['preferredType'],notes:string[]):DesignProfile=>({photoWeight,rhythm,headlineMaxLines,bodyMaxLines,safeMargin:6,preferredType,notes});
 
+// Visual system v3: each template has a recognisable silhouette and every card changes axis.
+// Photo slots deliberately use more of the canvas than the legacy library to avoid the generic boxed look.
 export const INSTAGRAM_45PLUS_LIBRARY:LibraryTemplate[]=[
-{id:'T01',name:'EDITORIAL PREMIUM',description:'Editorial sofisticado com fotografia forte, respiro e alternância de eixo.',profile:p('high','alternar esquerda/direita, abrir o terceiro card e fechar com CTA',3,5,'clean-serif',['foto protagonista','blocos de texto com respiro','alternância de eixo sem repetição']),cards:[
-{role:'cover',bg:'off_white',photos:[b(5,8,45,84,'0 92px 0 0','vertical')],headline:t(56,20,37,'headline dominante')},
-{role:'content',bg:'terracota',photos:[b(59,8,35,84,'42px','vertical')],text:t(7,22,43,'texto editorial')},
-{role:'content',bg:'off_white',photos:[b(8,8,84,43,'30px','horizontal')],text:t(8,59,84,'texto aberto')},
-{role:'proof',bg:'vinho',photos:[b(6,17,42,68,'84px 24px','vertical')],text:t(54,22,38,'prova/benefício')},
-{role:'cta',bg:'off_white',photos:[b(60,11,33,76,'22px 78px','vertical')],cta:t(7,24,45,'CTA forte')}]},
+{id:'T01',name:'EDITORIAL PREMIUM',description:'Editorial premium com fotografia protagonista, alternância radical de eixo e respiro de revista.',profile:p('high','hero esquerdo → hero direito → paisagem → recorte orgânico → fechamento editorial',3,5,'clean-serif',['CM-037 como régua','foto protagonista','alternância real card a card']),cards:[
+{role:'cover',bg:'off_white',photos:[b(0,0,56,100,'0 110px 110px 0','editorial_bleed_left')],headline:t(62,18,31,'headline dominante')},
+{role:'content',bg:'terracota',photos:[b(52,7,48,86,'96px 0 0 96px','editorial_bleed_right')],text:t(6,20,39,'texto editorial')},
+{role:'content',bg:'off_white',photos:[b(6,5,88,52,'34px','editorial_landscape')],text:t(8,64,78,'texto aberto')},
+{role:'proof',bg:'vinho',photos:[b(5,12,48,76,'50% 50% 18px 18px','editorial_arch')],text:t(60,21,33,'prova/benefício')},
+{role:'cta',bg:'bege',photos:[b(57,0,43,100,'110px 0 0 0','editorial_close')],cta:t(7,25,42,'CTA forte')}]},
 
-{id:'T02',name:'HERO BEAUTY',description:'Fotografia dominante e copy curta com sensação de campanha de beleza.',profile:p('high','hero dominante → pausa horizontal → close → sangrado',3,4,'elegant-classic',['uma imagem manda na página','texto sempre em ilha limpa','alto contraste']),cards:[
-{role:'cover',bg:'bege',photos:[b(43,0,57,100,undefined,'foto_grande_vertical')],headline:t(6,19,31,'headline impacto')},
-{role:'content',bg:'off_white',photos:[b(0,0,100,54,undefined,'horizontal_grande')],text:t(8,63,84,'texto inferior')},
-{role:'proof',bg:'terracota',photos:[b(9,13,82,59,'96px','hero_central')],text:t(10,79,80,'legenda curta')},
-{role:'content',bg:'off_white',photos:[b(0,18,61,76,undefined,'sangrado_esquerda')],text:t(67,25,27,'texto estreito')},
-{role:'cta',bg:'vinho',photos:[b(50,7,50,93,undefined,'sangrado_direita')],cta:t(7,28,36,'CTA vertical')}]},
+{id:'T02',name:'HERO BEAUTY',description:'Campanha de beleza: close fotográfico grande e copy mínima.',profile:p('high','full bleed → faixa inferior → close central → diagonal → full bleed final',3,4,'elegant-classic',['imagem ocupa 60–100%','copy em ilha','sensação de campanha']),cards:[
+{role:'cover',bg:'preto',photos:[b(0,0,100,100,undefined,'full_bleed')],headline:t(7,68,54,'headline overlay')},
+{role:'content',bg:'off_white',photos:[b(0,0,100,65,undefined,'beauty_landscape')],text:t(8,72,82,'copy curta')},
+{role:'proof',bg:'bege',photos:[b(15,7,70,78,'140px','beauty_close')],text:t(18,88,64,'legenda mínima')},
+{role:'content',bg:'off_white',photos:[b(0,0,68,100,'0 140px 0 0','beauty_diagonal')],text:t(74,22,21,'texto estreito')},
+{role:'cta',bg:'vinho',photos:[b(42,0,58,100,undefined,'beauty_bleed_right')],cta:t(6,31,31,'CTA vertical')}]},
 
-{id:'T03',name:'DUPLA EDITORIAL',description:'Duas imagens por página para comparação, escolha e contraste visual.',profile:p('high','pares equilibrados → comparação aberta → assimetria → CTA',3,4,'directional-poster',['comparar sem poluir','texto nunca espremido entre duas fotos','pares com pesos diferentes']),cards:[
-{role:'cover',bg:'off_white',photos:[b(6,32,40,58,'24px'),b(54,27,40,63,'24px')],headline:t(8,6,84,'pergunta/capa')},
-{role:'comparison',bg:'bege',photos:[b(7,9,41,49,'24px'),b(52,9,41,49,'24px')],text:t(8,65,84,'comparação')},
-{role:'comparison',bg:'off_white',photos:[b(8,13,35,55,'90px 0'),b(57,13,35,55,'0 90px')],text:t(8,75,84,'comparação explicada')},
-{role:'proof',bg:'terracota',photos:[b(6,8,54,56,'26px'),b(65,46,28,38,'26px')],text:t(8,70,48,'destaque')},
-{role:'cta',bg:'off_white',photos:[b(5,13,43,58,'28px'),b(52,13,43,58,'28px')],cta:t(8,78,84,'CTA escolha')}]},
+{id:'T03',name:'DUPLA EDITORIAL',description:'Comparação sofisticada com duplas em pesos e alturas diferentes.',profile:p('high','dupla escalonada → split → espelho → dominante+apoio → dupla final',3,4,'directional-poster',['duas fotos sem grade rígida','pesos diferentes','comparação limpa']),cards:[
+{role:'cover',bg:'off_white',photos:[b(4,32,43,62,'28px'),b(54,18,42,68,'28px')],headline:t(7,5,73,'pergunta/capa')},
+{role:'comparison',bg:'bege',photos:[b(0,0,50,72,undefined,'split_left'),b(50,0,50,72,undefined,'split_right')],text:t(8,79,84,'comparação')},
+{role:'comparison',bg:'off_white',photos:[b(6,11,39,65,'110px 16px'),b(55,11,39,65,'16px 110px')],text:t(10,82,80,'comparação espelho')},
+{role:'proof',bg:'terracota',photos:[b(0,0,64,69,'0 40px 40px 0'),b(70,55,25,34,'22px')],text:t(68,12,26,'destaque')},
+{role:'cta',bg:'off_white',photos:[b(5,12,42,61,'28px'),b(53,25,42,61,'28px')],cta:t(8,82,84,'CTA escolha')}]},
 
-{id:'T04',name:'COLAGEM MAGAZINE',description:'Colagem editorial com uma foto dominante e imagens de apoio em assimetria controlada.',profile:p('high','dominante + apoios → faixa → colagem vertical → trio final',3,4,'squeeze-deco',['uma foto manda em cada página','texto em ilha limpa','assimetria intencional']),cards:[
-{role:'cover',bg:'off_white',photos:[b(6,8,50,64,'24px'),b(62,10,30,30,'20px'),b(62,47,30,30,'20px')],headline:t(8,81,84,'capa revista')},
-{role:'content',bg:'bege',photos:[b(8,17,29,46,'22px'),b(43,7,49,40,'22px'),b(47,54,39,34,'22px')],text:t(8,68,32,'nota editorial')},
-{role:'proof',bg:'off_white',photos:[b(6,8,88,34,'26px'),b(7,63,39,27,'22px'),b(54,63,39,27,'22px')],text:t(8,47,84,'linha editorial')},
-{role:'content',bg:'vinho',photos:[b(7,10,36,74,'26px'),b(50,10,43,32,'22px'),b(66,70,26,17,'18px')],text:t(49,48,43,'texto lateral')},
-{role:'cta',bg:'off_white',photos:[b(7,16,27,43,'22px'),b(37,9,27,50,'22px'),b(67,16,27,43,'22px')],cta:t(10,69,80,'CTA final')}]},
+{id:'T04',name:'COLAGEM MAGAZINE',description:'Colagem de revista com sobreposição, assimetria e uma foto dominante.',profile:p('high','capa colagem → mosaico → faixa+retratos → coluna → trio editorial',3,4,'squeeze-deco',['sobreposição controlada','uma foto manda','ritmo magazine']),cards:[
+{role:'cover',bg:'off_white',photos:[b(0,8,61,68,'0 32px 32px 0'),b(66,4,29,37,'20px'),b(62,48,34,43,'20px')],headline:t(8,79,47,'capa revista')},
+{role:'content',bg:'bege',photos:[b(6,6,36,53,'22px'),b(46,14,50,36,'22px'),b(51,57,39,37,'22px')],text:t(7,66,34,'nota editorial')},
+{role:'proof',bg:'off_white',photos:[b(0,0,100,40,undefined,'magazine_strip'),b(7,58,34,36,'22px'),b(59,54,34,40,'22px')],text:t(8,45,78,'linha editorial')},
+{role:'content',bg:'vinho',photos:[b(5,6,39,88,'28px'),b(51,8,44,38,'22px'),b(69,69,26,22,'18px')],text:t(51,52,38,'texto lateral')},
+{role:'cta',bg:'off_white',photos:[b(4,22,29,48,'22px'),b(35,8,30,62,'22px'),b(67,22,29,48,'22px')],cta:t(9,77,82,'CTA final')}]},
 
-{id:'T05',name:'ANTES E DEPOIS',description:'Transformação com leitura imediata, comparação e prova visual.',profile:p('high','antes/depois → explicação → técnica → resultado → CTA',3,5,'clean-serif',['antes e depois com mesmo peso','cabelo inteiro visível','comparação clara']),cards:[
-{role:'cover',bg:'off_white',photos:[b(6,27,42,57,'24px'),b(52,27,42,57,'24px')],headline:t(8,6,84,'transformação'),labels:['ANTES','DEPOIS']},
-{role:'content',bg:'bege',photos:[b(7,8,45,84,'28px')],text:t(58,19,35,'O QUE MUDOU?')},
-{role:'comparison',bg:'off_white',photos:[b(8,10,38,43,'22px'),b(54,10,38,43,'22px')],text:t(8,62,84,'técnica/resultado')},
-{role:'proof',bg:'terracota',photos:[b(14,8,72,57,'34px')],text:t(10,72,80,'resultado de perto')},
-{role:'cta',bg:'off_white',photos:[b(8,16,36,52,'24px'),b(56,16,36,52,'24px')],cta:t(10,75,80,'CTA transformação'),labels:['ANTES','DEPOIS']}]},
+{id:'T05',name:'ANTES E DEPOIS',description:'Transformação visual direta com antes/depois grande e prova de detalhe.',profile:p('high','split total → antes dominante → detalhe → depois dominante → split final',3,5,'clean-serif',['antes/depois inequívoco','mesmo peso na comparação','resultado grande']),cards:[
+{role:'cover',bg:'preto',photos:[b(0,20,50,80,undefined,'before_bleed'),b(50,20,50,80,undefined,'after_bleed')],headline:t(7,4,86,'transformação'),labels:['ANTES','DEPOIS']},
+{role:'content',bg:'bege',photos:[b(0,0,58,100,'0 100px 0 0','before_focus')],text:t(65,19,29,'O QUE MUDOU?')},
+{role:'comparison',bg:'off_white',photos:[b(6,7,42,58,'24px'),b(52,7,42,58,'24px')],text:t(8,72,84,'técnica/resultado')},
+{role:'proof',bg:'terracota',photos:[b(8,5,84,70,'44px','result_close')],text:t(10,81,80,'resultado de perto')},
+{role:'cta',bg:'off_white',photos:[b(0,0,50,70,undefined,'before_final'),b(50,0,50,70,undefined,'after_final')],cta:t(10,78,80,'CTA transformação'),labels:['ANTES','DEPOIS']}]},
 
-{id:'T06',name:'ORGÂNICO FEMININO',description:'Arcos, ovais e curvas com ritmo suave e elegante.',profile:p('medium','arco → oval → cápsula → detalhe circular → arco invertido',3,5,'elegant-classic',['curvas como linguagem principal','respiro generoso','ornamento subordinado à foto']),cards:[
-{role:'cover',bg:'bege',photos:[b(7,12,44,70,'50% 50% 20px 20px','arco')],headline:t(56,23,36,'headline suave')},
-{role:'content',bg:'off_white',photos:[b(56,12,37,63,'50%','oval_vertical')],text:t(8,23,40,'texto acolhedor')},
-{role:'proof',bg:'rose',photos:[b(14,9,72,50,'999px','capsula_horizontal')],text:t(10,68,80,'benefício')},
-{role:'content',bg:'off_white',photos:[b(8,12,37,59,'50% 50% 18px 18px','arco'),b(64,60,25,25,'50%','circulo')],text:t(51,15,40,'detalhe')},
-{role:'cta',bg:'bege',photos:[b(58,14,35,68,'18px 18px 50% 50%','arco_invertido')],cta:t(8,28,42,'CTA delicado')}]},
+{id:'T06',name:'ORGÂNICO FEMININO',description:'Arcos, círculos e cápsulas com elegância suave sem perder presença fotográfica.',profile:p('high','arco grande → oval → cápsula → arco+detalhe → arco invertido',3,5,'elegant-classic',['curvas protagonistas','foto maior','respiro feminino']),cards:[
+{role:'cover',bg:'bege',photos:[b(3,7,53,86,'50% 50% 22px 22px','arch_large')],headline:t(62,20,31,'headline suave')},
+{role:'content',bg:'off_white',photos:[b(53,7,44,76,'50%','oval_large')],text:t(7,21,39,'texto acolhedor')},
+{role:'proof',bg:'rose',photos:[b(7,5,86,61,'999px','capsule_hero')],text:t(11,73,78,'benefício')},
+{role:'content',bg:'off_white',photos:[b(3,9,48,76,'50% 50% 20px 20px','arch'),b(68,61,28,28,'50%','detail_circle')],text:t(58,16,34,'detalhe')},
+{role:'cta',bg:'bege',photos:[b(56,6,41,82,'20px 20px 50% 50%','arch_inverse')],cta:t(7,28,41,'CTA delicado')}]},
 
-{id:'T07',name:'FOTO SANGRADA',description:'Fotografia encostada nas bordas com impacto alto e copy curta.',profile:p('high','direita → esquerda → topo → base → direita escura',3,4,'directional-poster',['sangrado como protagonista','copy curta','contraste forte']),cards:[
-{role:'cover',bg:'off_white',photos:[b(43,0,57,100,undefined,'sangrado_direita')],headline:t(6,25,32,'headline forte')},
-{role:'content',bg:'vinho',photos:[b(0,0,55,100,undefined,'sangrado_esquerda')],text:t(62,22,31,'texto lateral')},
-{role:'proof',bg:'off_white',photos:[b(0,0,100,53,undefined,'sangrado_superior')],text:t(8,62,84,'prova')},
-{role:'content',bg:'bege',photos:[b(0,47,100,53,undefined,'sangrado_inferior')],text:t(8,10,84,'texto superior')},
-{role:'cta',bg:'preto',photos:[b(41,0,59,100,undefined,'sangrado_direita')],cta:t(6,29,29,'CTA impacto')}]},
+{id:'T07',name:'FOTO SANGRADA',description:'Fotografia edge-to-edge com alternância de direção e texto curto.',profile:p('high','direita total → esquerda total → topo → base → full bleed',3,4,'directional-poster',['sem moldura','foto toca bordas','impacto alto']),cards:[
+{role:'cover',bg:'off_white',photos:[b(39,0,61,100,undefined,'bleed_right')],headline:t(5,23,30,'headline forte')},
+{role:'content',bg:'vinho',photos:[b(0,0,61,100,undefined,'bleed_left')],text:t(68,21,26,'texto lateral')},
+{role:'proof',bg:'off_white',photos:[b(0,0,100,61,undefined,'bleed_top')],text:t(8,68,82,'prova')},
+{role:'content',bg:'bege',photos:[b(0,39,100,61,undefined,'bleed_bottom')],text:t(8,8,82,'texto superior')},
+{role:'cta',bg:'preto',photos:[b(0,0,100,100,undefined,'full_bleed_dark')],cta:t(7,70,48,'CTA overlay')}]},
 
-{id:'T08',name:'REVISTA 45+',description:'Sistema de revista feminina com capa, matéria, coluna e fechamento editorial.',profile:p('medium','capa → nota lateral → matéria aberta → destaque → fechamento',4,6,'clean-serif',['hierarquia de revista','foto e texto com pesos distintos','mais espaço para conteúdo']),cards:[
-{role:'cover',bg:'off_white',photos:[b(46,8,47,83,'24px')],headline:t(7,16,39,'capa revista')},
-{role:'content',bg:'bege',photos:[b(7,11,49,65,'22px'),b(64,17,27,34,'18px')],text:t(60,58,33,'nota lateral')},
-{role:'content',bg:'off_white',photos:[b(8,9,84,43,'24px')],text:t(8,60,84,'matéria aberta')},
-{role:'proof',bg:'rose',photos:[b(55,8,38,72,'22px'),b(8,58,31,24,'18px')],text:t(8,15,38,'destaque')},
-{role:'cta',bg:'off_white',photos:[b(8,15,35,65,'22px')],cta:t(50,25,42,'editorial_cta')}]},
+{id:'T08',name:'REVISTA 45+',description:'Revista feminina contemporânea com capa, coluna, matéria aberta e pull quote.',profile:p('high','capa editorial → coluna → matéria → pull quote → fechamento',4,6,'clean-serif',['hierarquia de revista','foto grande','áreas de texto editoriais']),cards:[
+{role:'cover',bg:'off_white',photos:[b(42,0,58,100,'0 0 0 80px','magazine_cover')],headline:t(6,13,32,'capa revista'),extraText:[t(6,68,28,'linha de apoio')]},
+{role:'content',bg:'bege',photos:[b(0,0,58,100,'0 80px 80px 0','magazine_column')],text:t(65,18,29,'nota lateral')},
+{role:'content',bg:'off_white',photos:[b(5,5,90,52,'26px','feature_landscape')],text:t(7,63,86,'matéria aberta')},
+{role:'proof',bg:'rose',photos:[b(55,0,45,100,undefined,'portrait_bleed'),b(5,61,32,29,'18px')],text:t(6,15,40,'destaque')},
+{role:'cta',bg:'off_white',photos:[b(0,13,46,74,'0 42px 42px 0','closing_portrait')],cta:t(54,26,38,'editorial_cta')}]},
 
-{id:'T09',name:'VISAGISMO',description:'Rosto em destaque, leitura técnica lateral, comparação e recomendação final.',profile:p('medium','rosto central → análise esquerda → análise direita → comparação → diagnóstico',3,6,'elegant-classic',['rosto com respiro','área técnica limpa','comparação equilibrada']),cards:[
-{role:'cover',bg:'off_white',photos:[b(29,34,42,46,'50%','oval')],headline:t(10,8,80,'visagismo capa')},
-{role:'content',bg:'bege',photos:[b(8,15,43,66,'24px')],text:t(57,17,35,'análise 1')},
-{role:'content',bg:'off_white',photos:[b(50,13,42,65,'24px')],text:t(8,18,36,'análise 2')},
-{role:'comparison',bg:'rose',photos:[b(8,14,37,53,'24px'),b(55,14,37,53,'24px')],text:t(10,74,80,'comparação')},
-{role:'cta',bg:'off_white',photos:[b(31,9,38,55,'50%','oval')],cta:t(10,72,80,'CTA diagnóstico')}]},
+{id:'T09',name:'VISAGISMO',description:'Diagnóstico visual com rosto protagonista, análise lateral e comparação.',profile:p('high','rosto hero → análise esquerda → análise direita → comparação → diagnóstico',3,6,'elegant-classic',['rosto grande','leitura técnica limpa','comparação objetiva']),cards:[
+{role:'cover',bg:'off_white',photos:[b(22,25,56,62,'50%','face_hero')],headline:t(9,5,82,'visagismo capa')},
+{role:'content',bg:'bege',photos:[b(0,8,56,84,'0 44px 44px 0','analysis_left')],text:t(63,18,31,'análise 1')},
+{role:'content',bg:'off_white',photos:[b(44,8,56,84,'44px 0 0 44px','analysis_right')],text:t(6,18,31,'análise 2')},
+{role:'comparison',bg:'rose',photos:[b(5,9,43,62,'30px'),b(52,9,43,62,'30px')],text:t(10,78,80,'comparação')},
+{role:'cta',bg:'off_white',photos:[b(27,5,46,61,'50%','diagnostic_face')],cta:t(10,73,80,'CTA diagnóstico')}]},
 
-{id:'T10',name:'CATÁLOGO DE CORTES',description:'Catálogo numerado com capa de opções, páginas individuais e fechamento comparativo.',profile:p('high','trio de abertura → opção esquerda → opção direita → hero horizontal → trio final',3,4,'directional-poster',['número como âncora','foto mostra corte inteiro','texto curto e objetivo']),cards:[
-{role:'cover',bg:'off_white',photos:[b(6,34,27,42,'22px'),b(36,30,28,46,'22px'),b(67,34,27,42,'22px')],headline:t(8,7,84,'capa catálogo')},
-{role:'content',bg:'bege',photos:[b(8,12,43,72,'24px')],number:'01',text:t(58,25,34,'opção 01')},
-{role:'content',bg:'off_white',photos:[b(49,12,43,72,'24px')],number:'02',text:t(8,25,34,'opção 02')},
-{role:'proof',bg:'terracota',photos:[b(8,14,84,50,'26px')],number:'03',text:t(8,71,84,'opção 03')},
-{role:'cta',bg:'off_white',photos:[b(8,16,25,43,'22px'),b(37,16,25,43,'22px'),b(66,16,25,43,'22px')],cta:t(10,69,80,'escolha seu corte')}]},
+{id:'T10',name:'CATÁLOGO DE CORTES',description:'Catálogo de cortes com numeração grande, fotos inteiras e comparação final.',profile:p('high','trio capa → opção esquerda → opção direita → hero → trio final',3,4,'directional-poster',['número editorial','corte inteiro visível','catálogo sem grade monótona']),cards:[
+{role:'cover',bg:'off_white',photos:[b(3,34,29,50,'22px'),b(35,20,30,64,'22px'),b(68,34,29,50,'22px')],headline:t(7,5,86,'capa catálogo')},
+{role:'content',bg:'bege',photos:[b(0,7,57,86,'0 36px 36px 0','catalog_left')],number:'01',text:t(64,26,29,'opção 01')},
+{role:'content',bg:'off_white',photos:[b(43,7,57,86,'36px 0 0 36px','catalog_right')],number:'02',text:t(7,26,29,'opção 02')},
+{role:'proof',bg:'terracota',photos:[b(6,5,88,64,'30px','catalog_hero')],number:'03',text:t(8,76,84,'opção 03')},
+{role:'cta',bg:'off_white',photos:[b(4,17,28,50,'22px'),b(36,10,28,57,'22px'),b(68,17,28,50,'22px')],cta:t(10,75,80,'escolha seu corte')}]},
 
-{id:'T11',name:'FAIXA FOTOGRÁFICA',description:'Faixas horizontais criam ritmo editorial e leitura rápida.',profile:p('medium','faixa central → topo → base → cápsula → faixa final',3,5,'clean-serif',['bom para conteúdo educativo','foto panorâmica','texto fora da faixa']),cards:[
-{role:'cover',bg:'off_white',photos:[b(0,36,100,34,undefined,'faixa_horizontal')],headline:t(8,8,84,'headline topo'),text:t(8,78,84,'apoio')},
-{role:'content',bg:'bege',photos:[b(7,10,86,35,'24px')],text:t(8,55,84,'texto inferior')},
-{role:'content',bg:'off_white',photos:[b(0,54,100,33,undefined,'faixa_horizontal')],text:t(8,12,84,'texto superior')},
-{role:'proof',bg:'rose',photos:[b(10,22,80,39,'100px')],text:t(10,69,80,'benefício')},
-{role:'cta',bg:'vinho',photos:[b(0,18,100,37,undefined,'faixa_horizontal')],cta:t(10,66,80,'CTA final')}]},
+{id:'T11',name:'SPLIT EDITORIAL',description:'Sistema split com blocos de cor e fotografia alternando vertical, horizontal e diagonal.',profile:p('high','split vertical → split invertido → faixa horizontal → assimetria → split final',3,5,'clean-serif',['50/50 sofisticado','alternância de eixo','texto nunca sobrecarrega foto']),cards:[
+{role:'cover',bg:'off_white',photos:[b(50,0,50,100,undefined,'split_vertical')],headline:t(6,18,36,'headline split')},
+{role:'content',bg:'vinho',photos:[b(0,0,52,100,undefined,'split_inverse')],text:t(59,21,34,'texto split')},
+{role:'proof',bg:'bege',photos:[b(0,0,100,58,undefined,'split_landscape')],text:t(8,66,84,'benefício aberto')},
+{role:'content',bg:'off_white',photos:[b(6,8,61,80,'34px','split_asym')],text:t(73,20,21,'nota lateral')},
+{role:'cta',bg:'preto',photos:[b(48,0,52,100,undefined,'split_close')],cta:t(6,30,34,'CTA split')}]},
 
-{id:'T12',name:'CLOSE BEAUTY',description:'Close de textura, rosto e cabelo para alto impacto visual.',profile:p('high','close vertical → horizontal → macro → detalhe circular → close central',3,4,'squeeze-deco',['textura como protagonista','copy mínima','contraste alto']),cards:[
-{role:'cover',bg:'preto',photos:[b(45,5,50,90,undefined,'close_vertical')],headline:t(6,24,33,'headline close')},
-{role:'content',bg:'off_white',photos:[b(8,8,84,57,'24px','close_horizontal')],text:t(8,72,84,'descrição')},
-{role:'proof',bg:'bege',photos:[b(7,12,49,77,'24px','macro_vertical')],text:t(63,26,31,'detalhe técnico')},
-{role:'content',bg:'off_white',photos:[b(44,10,49,72,'24px'),b(8,58,25,25,'50%','circulo')],text:t(8,16,31,'micro detalhe')},
-{role:'cta',bg:'vinho',photos:[b(26,8,48,60,'120px','close_central')],cta:t(10,75,80,'CTA beauty')}]}
+{id:'T12',name:'CAPA IMPACTO',description:'Poster editorial de alto impacto com tipografia dominante e fotografia em recortes dramáticos.',profile:p('high','poster → recorte lateral → faixa → close → poster final',2,4,'directional-poster',['headline gigante','composição dramática','alto contraste']),cards:[
+{role:'cover',bg:'vinho',photos:[b(47,0,53,100,undefined,'poster_bleed')],headline:t(5,12,42,'headline gigante')},
+{role:'content',bg:'off_white',photos:[b(0,7,65,86,'0 90px 90px 0','poster_left')],text:t(72,22,22,'copy curta')},
+{role:'proof',bg:'preto',photos:[b(0,16,100,58,undefined,'poster_strip')],text:t(8,80,84,'frase impacto')},
+{role:'content',bg:'bege',photos:[b(25,4,70,78,'120px 0 0 120px','poster_close')],text:t(6,20,23,'nota')},
+{role:'cta',bg:'terracota',photos:[b(0,0,100,100,undefined,'poster_full')],cta:t(7,72,58,'CTA overlay')}]}
 ];
 
-export const TEMPLATE_USAGE_GUIDE=Object.fromEntries(INSTAGRAM_45PLUS_LIBRARY.map((template)=>[template.id,{name:template.name,description:template.description,profile:template.profile,cards:template.cards.map((card,index)=>({card:index+1,role:card.role,photos:card.photos.length,mainText:card.headline?'headline':card.cta?'cta':'text'}))}]));
-
-export const MASTER_INSTRUCTION="Use o template selecionado como sistema visual, não como sugestão. Todos os cards são 1080x1350 px (4:5). Preserve slots, respiro e hierarquia. O Gerador pode preencher automaticamente slots secundários com outras fotos do mesmo projeto para completar colagens e comparações; o Hermes continua decidindo apenas conteúdo e imagens, nunca coordenadas. Não sobreponha copy ao rosto ou ao corte principal. Respeite o papel de cada página (capa, conteúdo, comparação, prova ou CTA), mantenha headline curta, corpo enxuto e CTA destacado. Quando não houver foto suficiente, mostre literalmente 'COLOQUE SUA FOTO AQUI'. A estética é premium, contemporânea, humana e direcionada a mulheres 45+.";
+export function getInstagramTemplate(id:string){return INSTAGRAM_45PLUS_LIBRARY.find((template)=>template.id===id)??INSTAGRAM_45PLUS_LIBRARY[0];}
+export function getInstagramTemplateCard(id:string,index:number){const template=getInstagramTemplate(id);return template.cards[index%template.cards.length];}
