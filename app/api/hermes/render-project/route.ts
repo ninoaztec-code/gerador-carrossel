@@ -156,7 +156,7 @@ function absoluteImage(src: string, origin: string) {
   return new URL(src.startsWith("/") ? src : `/${src}`, origin).toString();
 }
 
-function renderCard(templateId: string, card: LibraryCard, cardIndex: number, state: ProjectState, origin: string) {
+function renderCard(templateId: string, card: LibraryCard, cardIndex: number, totalCards: number, state: ProjectState, origin: string) {
   const main = card.headline ?? card.text ?? card.cta ?? { x: 7, y: 18, w: 40 };
   const key = cardKey(templateId, cardIndex);
   const copy = state.copies?.[key] ?? { headline: "", body: "", cta: "" };
@@ -180,7 +180,7 @@ function renderCard(templateId: string, card: LibraryCard, cardIndex: number, st
 
   const transform = (name: "headline" | "body" | "cta") => `translate(${moves[name].x * 2}px,${moves[name].y * 2}px)`;
   return `<section id="card-${cardIndex + 1}" class="card" data-template="${esc(templateId)}" data-card="${cardIndex + 1}" style="background:${esc(bg)};color:${esc(text)}">
-    <div class="brand">MAGO DAS TESOURAS<br/><span>${String(cardIndex + 1).padStart(2, "0")} / 05 · ${esc(templateId)}</span></div>
+    <div class="brand">MAGO DAS TESOURAS<br/><span>${String(cardIndex + 1).padStart(2, "0")} / ${String(totalCards).padStart(2, "0")} · ${esc(templateId)}</span></div>
     ${photos}
     <div class="copy" style="left:${main.x}%;top:${main.y}%;width:${main.w}%">
       <div class="headline" style="transform:${transform("headline")};font-family:${esc(type.headline)};font-size:${scale.h}px;text-transform:${type.upper ? "uppercase" : "none"}">${esc(copy.headline)}</div>
@@ -194,7 +194,8 @@ export async function GET(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
 
   const projectId = req.nextUrl.searchParams.get("project_id")?.trim();
-  const requestedCard = Number(req.nextUrl.searchParams.get("card") || 0);
+  const cardParam = req.nextUrl.searchParams.get("card");
+  const requestedCard = Number(cardParam || 0);
   if (!projectId) return NextResponse.json({ ok: false, error: "project_id_obrigatorio" }, { status: 400 });
 
   try {
@@ -211,10 +212,14 @@ export async function GET(req: NextRequest) {
     const template = INSTAGRAM_45PLUS_LIBRARY.find((item) => item.id === templateId);
     if (!template) return NextResponse.json({ ok: false, error: "template_invalido", template: templateId }, { status: 422 });
 
-    const indexes = requestedCard >= 1 && requestedCard <= template.cards.length
+    const totalCards = Math.max(1, Math.min(project.cards.length || template.cards.length, template.cards.length));
+    if (cardParam !== null && (!Number.isInteger(requestedCard) || requestedCard < 1 || requestedCard > totalCards)) {
+      return NextResponse.json({ ok: false, error: "card_not_found", project_id: projectId, requested_card: requestedCard, total_cards: totalCards }, { status: 404 });
+    }
+    const indexes = cardParam !== null
       ? [requestedCard - 1]
-      : template.cards.map((_, index) => index);
-    const cards = indexes.map((index) => renderCard(template.id, template.cards[index], index, state, req.nextUrl.origin)).join("\n");
+      : Array.from({ length: totalCards }, (_, index) => index);
+    const cards = indexes.map((index) => renderCard(template.id, template.cards[index], index, totalCards, state, req.nextUrl.origin)).join("\n");
     const html = `<!doctype html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>${esc(projectId)} · render</title><style>
 *{box-sizing:border-box}html,body{margin:0;padding:0;background:#111}body{font-family:Arial,sans-serif}.deck{display:grid;gap:40px;padding:40px;width:max-content}.card{position:relative;width:1080px;height:1350px;overflow:hidden}.brand{position:absolute;left:60px;top:52px;z-index:5;font-size:18px;font-weight:800;letter-spacing:.16em;line-height:1.35}.brand span{font-weight:500}.photo-slot{position:absolute;overflow:hidden;border:2px dashed #A77C69;background:#E9DED4;color:#755547;z-index:2}.placeholder{width:100%;height:100%;display:grid;place-items:center;padding:24px;text-align:center;font-size:20px;font-weight:800}.copy{position:absolute;z-index:3}.headline{font-weight:700;line-height:1.08}.body{margin-top:36px;line-height:1.5}.cta{margin-top:40px;font-weight:800;line-height:1.25}@media print{body{background:#fff}.deck{gap:0;padding:0}.card{page-break-after:always}}
 </style></head><body><main class="deck">${cards}</main></body></html>`;
@@ -227,6 +232,7 @@ export async function GET(req: NextRequest) {
         "x-carousel-project": projectId,
         "x-carousel-template": template.id,
         "x-carousel-cards": String(indexes.length),
+        "x-carousel-total-cards": String(totalCards),
       },
     });
   } catch (error) {
