@@ -1,3 +1,5 @@
+import T13_SPEC from "@/templates/T13_PREMIUM_CATALOGO_45PLUS.json";
+
 export type Box={x:number;y:number;w:number;h:number;radius?:string;label?:string;shape?:string};
 export type TextBox={x:number;y:number;w:number;kind?:string};
 export type CardRole='cover'|'content'|'comparison'|'proof'|'cta';
@@ -9,6 +11,55 @@ const P='COLOQUE SUA FOTO AQUI';
 const b=(x:number,y:number,w:number,h:number,radius?:string,shape?:string):Box=>({x,y,w,h,radius,label:P,shape});
 const t=(x:number,y:number,w:number,kind?:string):TextBox=>({x,y,w,kind});
 const p=(photoWeight:DesignProfile['photoWeight'],rhythm:string,headlineMaxLines:number,bodyMaxLines:number,preferredType:DesignProfile['preferredType'],notes:string[]):DesignProfile=>({photoWeight,rhythm,headlineMaxLines,bodyMaxLines,safeMargin:6,preferredType,notes});
+const px=(value:number,total:number)=>Number(((value/total)*100).toFixed(4));
+
+type T13JsonCard={
+  card:number;
+  role:string;
+  name?:string;
+  background?:{color?:string};
+  photo?:{x:number;y:number;width:number;height:number;border_radius?:{top_left?:number;top_right?:number;bottom_left?:number;bottom_right?:number}};
+  content_panel?:{x:number;y:number;width:number;height:number;headline?:{x?:number;y?:number;width?:number};};
+  elements?:Array<{id?:string;x?:number;y?:number;width?:number}>;
+};
+
+function t13FromJson():LibraryTemplate{
+  const spec=T13_SPEC.template;
+  const cards=(spec.cards as T13JsonCard[]).map((card,index):LibraryCard=>{
+    const bg=card.background?.color||spec.visual_identity.palette.cream;
+    if(card.role==='cover'){
+      const headline=card.elements?.find((item)=>item.id==='headline');
+      return {
+        role:'cover',
+        bg,
+        photos:[],
+        headline:t(px(headline?.x??95,1080),px(headline?.y??275,1350),px(headline?.width??820,1080),'t13_json_cover'),
+        labels:['JSON:T13_PREMIUM_CATALOGO_45PLUS']
+      };
+    }
+    const photo=card.photo;
+    const panel=card.content_panel;
+    const radius=photo?.border_radius;
+    const radiusCss=radius?`${radius.top_left??0}px ${radius.top_right??0}px ${radius.bottom_right??0}px ${radius.bottom_left??0}px`:'0 0 80px 80px';
+    return {
+      role:index===4?'cta':'content',
+      bg,
+      photos:photo?[b(px(photo.x,1080),px(photo.y,1350),px(photo.width,1080),px(photo.height,1350),radiusCss,'t13_json_main_photo')]:[],
+      text:t(px(panel?.headline?.x??75,1080),px(panel?.headline?.y??795,1350),px(panel?.headline?.width??900,1080),'t13_json_content'),
+      number:String(index+1).padStart(2,'0')
+    };
+  });
+  return {
+    id:String(spec.runtime_id||'T13').toUpperCase(),
+    name:spec.name,
+    description:'Template carregado diretamente do JSON T13_PREMIUM_CATALOGO_45PLUS.json',
+    profile:p('high','capa editorial → foto protagonista + painel → catálogo premium',3,4,'clean-serif',['fonte: JSON','foto separada do texto','45plus premium']),
+    cards
+  };
+}
+
+const T13_LIBRARY_TEMPLATE=t13FromJson();
+
 export const INSTAGRAM_45PLUS_LIBRARY:LibraryTemplate[]=[
 {id:'T01',name:'EDITORIAL PREMIUM',description:'Editorial premium com fotografia protagonista e alternância radical de eixo.',profile:p('high','hero esquerdo → hero direito → paisagem → arco → fechamento',3,5,'clean-serif',['CM-037 como régua','foto protagonista']),cards:[{role:'cover',bg:'off_white',photos:[b(0,0,56,100,'0 110px 110px 0','editorial_bleed_left')],headline:t(62,18,31,'headline dominante')},{role:'content',bg:'terracota',photos:[b(52,7,48,86,'96px 0 0 96px','editorial_bleed_right')],text:t(6,20,39,'texto editorial')},{role:'content',bg:'off_white',photos:[b(6,5,88,52,'34px','editorial_landscape')],text:t(8,64,78,'texto aberto')},{role:'proof',bg:'vinho',photos:[b(5,12,48,76,'50% 50% 18px 18px','editorial_arch')],text:t(60,21,33,'prova')},{role:'cta',bg:'bege',photos:[b(57,0,43,100,'110px 0 0 0','editorial_close')],cta:t(7,25,42,'CTA forte')}]},
 {id:'T02',name:'HERO BEAUTY',description:'Campanha de beleza com close fotográfico grande e copy mínima.',profile:p('high','full bleed → faixa → close → diagonal → bleed final',3,4,'elegant-classic',['imagem ocupa 60–100%','copy em ilha']),cards:[{role:'cover',bg:'preto',photos:[b(0,0,100,100,undefined,'full_bleed')],headline:t(7,58,54,'headline overlay')},{role:'content',bg:'off_white',photos:[b(0,0,100,65,undefined,'beauty_landscape')],text:t(8,66,82,'copy curta')},{role:'proof',bg:'bege',photos:[b(15,7,70,70,'140px','beauty_close')],text:t(18,72,64,'legenda mínima')},{role:'content',bg:'off_white',photos:[b(0,0,68,100,'0 140px 0 0','beauty_diagonal')],text:t(72,22,24,'texto estreito')},{role:'cta',bg:'vinho',photos:[b(42,0,58,100,undefined,'beauty_bleed_right')],cta:t(6,31,31,'CTA vertical')}]},
@@ -21,7 +72,8 @@ export const INSTAGRAM_45PLUS_LIBRARY:LibraryTemplate[]=[
 {id:'T09',name:'VISAGISMO',description:'Diagnóstico visual com rosto protagonista e análise lateral.',profile:p('high','rosto hero → esquerda → direita → comparação → diagnóstico',3,6,'elegant-classic',['rosto grande']),cards:[{role:'cover',bg:'off_white',photos:[b(22,25,56,62,'50%')],headline:t(9,5,82,'visagismo')},{role:'content',bg:'bege',photos:[b(0,8,56,84,'0 44px 44px 0')],text:t(63,18,31,'análise 1')},{role:'content',bg:'off_white',photos:[b(44,8,56,84,'44px 0 0 44px')],text:t(6,18,31,'análise 2')},{role:'comparison',bg:'rose',photos:[b(5,9,43,62,'30px'),b(52,9,43,62,'30px')],text:t(10,78,80,'comparação')},{role:'cta',bg:'off_white',photos:[b(27,5,46,61,'50%')],cta:t(10,73,80,'diagnóstico')}]},
 {id:'T10',name:'CATÁLOGO DE CORTES',description:'Catálogo numerado com fotos inteiras e comparação final.',profile:p('high','trio → esquerda → direita → hero → trio',3,4,'directional-poster',['número editorial']),cards:[{role:'cover',bg:'off_white',photos:[b(3,34,29,50,'22px'),b(35,20,30,64,'22px'),b(68,34,29,50,'22px')],headline:t(7,5,86,'catálogo')},{role:'content',bg:'bege',photos:[b(0,7,57,86,'0 36px 36px 0')],number:'01',text:t(64,26,29,'opção')},{role:'content',bg:'off_white',photos:[b(43,7,57,86,'36px 0 0 36px')],number:'02',text:t(7,26,29,'opção')},{role:'proof',bg:'terracota',photos:[b(6,5,88,58,'30px')],number:'03',text:t(8,68,84,'opção')},{role:'cta',bg:'off_white',photos:[b(4,15,28,46,'22px'),b(36,8,28,53,'22px'),b(68,15,28,46,'22px')],cta:t(10,68,80,'escolha')}]},
 {id:'T11',name:'SPLIT EDITORIAL',description:'Sistema split alternando vertical, horizontal e assimetria.',profile:p('high','vertical → invertido → horizontal → assimetria → final',3,5,'clean-serif',['50/50 sofisticado']),cards:[{role:'cover',bg:'off_white',photos:[b(50,0,50,100)],headline:t(6,18,36,'split')},{role:'content',bg:'vinho',photos:[b(0,0,52,100)],text:t(59,21,34,'split')},{role:'proof',bg:'bege',photos:[b(0,0,100,58)],text:t(8,66,84,'aberto')},{role:'content',bg:'off_white',photos:[b(6,8,61,80,'34px')],text:t(73,20,21,'lateral')},{role:'cta',bg:'preto',photos:[b(48,0,52,100)],cta:t(6,30,34,'CTA')}]},
-{id:'T12',name:'CAPA IMPACTO',description:'Poster editorial de alto impacto com fotografia dramática.',profile:p('high','poster → lateral → faixa → close → poster final',2,4,'directional-poster',['headline gigante','alto contraste']),cards:[{role:'cover',bg:'vinho',photos:[b(47,0,53,100)],headline:t(5,12,42,'headline gigante')},{role:'content',bg:'off_white',photos:[b(0,7,65,86,'0 90px 90px 0')],text:t(70,22,24,'curta')},{role:'proof',bg:'preto',photos:[b(0,14,100,50)],text:t(8,68,84,'impacto')},{role:'content',bg:'bege',photos:[b(28,4,67,74,'120px 0 0 120px')],text:t(6,20,24,'nota')},{role:'cta',bg:'terracota',photos:[b(0,0,100,100)],cta:t(7,62,58,'overlay')}]}
+{id:'T12',name:'CAPA IMPACTO',description:'Poster editorial de alto impacto com fotografia dramática.',profile:p('high','poster → lateral → faixa → close → poster final',2,4,'directional-poster',['headline gigante','alto contraste']),cards:[{role:'cover',bg:'vinho',photos:[b(47,0,53,100)],headline:t(5,12,42,'headline gigante')},{role:'content',bg:'off_white',photos:[b(0,7,65,86,'0 90px 90px 0')],text:t(70,22,24,'curta')},{role:'proof',bg:'preto',photos:[b(0,14,100,50)],text:t(8,68,84,'impacto')},{role:'content',bg:'bege',photos:[b(28,4,67,74,'120px 0 0 120px')],text:t(6,20,24,'nota')},{role:'cta',bg:'terracota',photos:[b(0,0,100,100)],cta:t(7,62,58,'overlay')}]},
+T13_LIBRARY_TEMPLATE
 ];
 export const TEMPLATE_USAGE_GUIDE=Object.fromEntries(INSTAGRAM_45PLUS_LIBRARY.map((template)=>[template.id,{name:template.name,description:template.description,profile:template.profile,cards:template.cards.map((card,index)=>({card:index+1,role:card.role,photos:card.photos.length,mainText:card.headline?'headline':card.cta?'cta':'text'}))}]));
 export const MASTER_INSTRUCTION="Use o template selecionado como sistema visual, não como sugestão. Todos os cards são 1080x1350 px (4:5). Preserve slots, respiro e hierarquia. O Gerador pode preencher automaticamente slots secundários com outras fotos do mesmo projeto para completar colagens e comparações; o Hermes continua decidindo apenas conteúdo e imagens, nunca coordenadas. Não sobreponha copy ao rosto ou ao corte principal. Respeite o papel de cada página (capa, conteúdo, comparação, prova ou CTA), mantenha headline curta, corpo enxuto e CTA destacado. Quando não houver foto suficiente, mostre literalmente 'COLOQUE SUA FOTO AQUI'. A estética é premium, contemporânea, humana e direcionada a mulheres 45+.";
