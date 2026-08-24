@@ -1,0 +1,27 @@
+{
+  "template": {
+    "id": "T14_EDITORIAL_AUTORIDADE_MAGO_45PLUS",
+    "runtime_id": "T14",
+    "name": "Editorial Autoridade Mago 45+",
+    "version": "1.0",
+    "format": {"platform":"instagram","type":"carousel","width":1080,"height":1350,"aspect_ratio":"4:5","unit":"px","safe_area":{"top":64,"right":72,"bottom":64,"left":72}},
+    "visual_identity": {
+      "style":["editorial","authority","minimal","clean","educational","45plus"],
+      "palette":{"white":"#FFFFFF","off_white":"#FAF9F7","black":"#111111","gray":"#6F6F6F","line":"#E7E4DF","accent":"#9A6847"},
+      "typography":{"headline":{"family":"Inter","fallback":"Arial, Helvetica, sans-serif","weight":800,"line_height":1.02,"letter_spacing":-1.8},"body":{"family":"Inter","fallback":"Arial, Helvetica, sans-serif","weight":450,"line_height":1.28},"emphasis":{"family":"Inter","fallback":"Arial, Helvetica, sans-serif","weight":800},"meta":{"family":"Inter","fallback":"Arial, Helvetica, sans-serif","weight":600}}
+    },
+    "global_rules":{"brand":"Mago das Tesouras","handle":"@omagodastesouras","audience":"women 45+","predominant_alignment":"left","white_space_priority":true,"one_idea_per_card":true,"headline_max_lines":5,"body_max_lines":10,"photo_fit":"cover","face_crop":"preserve","hair_crop":"preserve","never_overlay_body_on_face":true,"never_overlay_body_on_hair":true,"allow_manual_photo_position":true,"allow_photo_zoom":true,"allow_photo_x":true,"allow_photo_y":true,"allow_text_move":true,"allow_text_resize":true,"automatic_emphasis":{"enabled":true,"max_spans":3,"max_words_per_span":6,"weight":800,"manual_override":true}},
+    "author_header":{"enabled":true,"optional":true,"x":78,"y":66,"avatar_size":52,"name":"Mago das Tesouras","handle":"@omagodastesouras","font_family":"Inter","name_weight":700,"handle_weight":450},
+    "layout_variants":[
+      {"id":"T14-A","name":"Capa de Impacto","usage":"hook","photo":{"x":610,"y":535,"width":398,"height":640,"border_radius":26},"headline":{"x":78,"y":265,"width":850,"font_size":72,"font_weight":800},"body":{"x":78,"y":760,"width":470,"font_size":32}},
+      {"id":"T14-B","name":"Texto Editorial","usage":"explanation","headline":{"x":78,"y":290,"width":900,"font_size":67,"font_weight":800},"body":{"x":78,"y":660,"width":860,"font_size":35}},
+      {"id":"T14-C","name":"Texto + Foto Lateral","usage":"example","photo":{"x":610,"y":350,"width":398,"height":770,"border_radius":24,"mirror_allowed":true},"headline":{"x":78,"y":285,"width":475,"font_size":60,"font_weight":800},"body":{"x":78,"y":640,"width":465,"font_size":31}},
+      {"id":"T14-D","name":"Texto + Foto Inferior","usage":"visual proof","photo":{"x":78,"y":760,"width":930,"height":500,"border_radius":24,"invert_allowed":true},"headline":{"x":78,"y":250,"width":900,"font_size":62,"font_weight":800},"body":{"x":78,"y":525,"width":860,"font_size":30}},
+      {"id":"T14-E","name":"Frase ou Dado de Impacto","usage":"insight","headline":{"x":78,"y":350,"width":900,"font_size":92,"font_weight":800},"body":{"x":78,"y":850,"width":780,"font_size":31}},
+      {"id":"T14-F","name":"Fechamento + CTA","usage":"closing","photo":{"x":610,"y":430,"width":398,"height":690,"border_radius":24,"optional":true},"headline":{"x":78,"y":300,"width":475,"font_size":60,"font_weight":800},"cta":{"x":78,"y":850,"width":465,"font_size":32,"font_weight":700}}
+    ],
+    "rhythm":{"avoid_consecutive_same_variant":true,"recommended_7":["T14-A","T14-B","T14-C","T14-B","T14-D","T14-E","T14-F"],"recommended_10":["T14-A","T14-B","T14-C","T14-D","T14-B","T14-E","T14-C","T14-B","T14-D","T14-F"]},
+    "editor_controls":{"photo":{"upload":true,"replace":true,"move_left":true,"move_right":true,"move_up":true,"move_down":true,"zoom_in":true,"zoom_out":true,"fit":["cover","contain"],"reset":true},"text":{"editable":true,"move":true,"resize":true,"font_size":true,"alignment":true,"partial_bold":true},"template":{"duplicate":true,"change_variant_preserve_content":true}},
+    "validation":{"prevent_overflow":true,"prevent_text_photo_collision":true,"prevent_face_crop":true,"prevent_hair_crop":true,"minimum_font_size":16,"render_width":1080,"render_height":1350}
+  }
+}
